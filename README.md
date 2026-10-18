@@ -1,8 +1,17 @@
 # TTC Quiz
 
-Quizzes about the Toronto Transit Commission. The first quiz shows a route number and asks you to pick its name from four options, in rounds of 5, 10 or 15 questions. You can quiz on the whole city, or draw an area on an OpenStreetMap map to only get routes that pass through it.
+**Play it at https://aascalon.github.io/ttc-quiz/**
 
-Progress is tracked per route in the browser (New → Learning → Known → Instant, where Instant means three correct answers in a row, each under 2 seconds), and rounds favour the routes you don't know yet.
+Quizzes about the Toronto Transit Commission's bus and streetcar routes, in rounds of 5, 10 or 15 questions:
+
+- **Number → name:** see a route number, pick its name from four options.
+- **Name → number:** see a route's name on its sign, type its number.
+
+You can quiz on the whole city, or draw an area on an OpenStreetMap map to only get routes that pass through it.
+
+Progress is tracked per route and per direction in the browser (New → Learning → Known → Instant, where Instant means three correct answers in a row, each under 2 seconds, or 3 when typing). Rounds use simple spaced repetition: missed routes come back soon, and routes you know rest for longer. **Learn mode** drills just the routes in the Learning stage.
+
+Pushing to `main` runs the tests and deploys to GitHub Pages (`.github/workflows/deploy.yml`).
 
 ```sh
 npm install
