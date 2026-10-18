@@ -105,6 +105,23 @@ describe("area quizzes", () => {
     }
   });
 
+  it("asks only about `ask` routes but still draws distractors from the area", () => {
+    const ask = local.filter((r) => ["501", "504"].includes(r.number));
+    const askNames = new Set(ask.map((r) => r.name));
+    const localNames = new Set(local.map((r) => r.name));
+    let otherNames = 0;
+    for (let run = 0; run < 20; run++) {
+      for (const q of buildQuiz(routes, 2, { local, ask })) {
+        expect(ask).toContain(q.route);
+        for (const o of q.options) {
+          expect(localNames.has(o)).toBe(true);
+          if (!askNames.has(o)) otherNames++;
+        }
+      }
+    }
+    expect(otherNames).toBeGreaterThan(0);
+  });
+
   it("offers round lengths that fit the area", () => {
     expect(lengthOptions(230)).toEqual([5, 10, 15]);
     expect(lengthOptions(15)).toEqual([5, 10, 15]);

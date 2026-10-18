@@ -90,6 +90,52 @@ describe("quiz UI", () => {
     expect($$('[data-action="start"]')).toHaveLength(3);
   });
 
+  it("Learn mode drills only Learning routes", async () => {
+    const app = await mount();
+    expect(($('[data-action="learn"]') as HTMLButtonElement).disabled).toBe(true);
+
+    // Miss every question in a 5-question round: those 5 routes are now Learning.
+    $('[data-length="5"]')!.click();
+    const missed: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const number = $(".badge")!.textContent!;
+      const answer = routes.find((r) => r.number === number)!.name;
+      missed.push(number);
+      $$(".option").find((o) => o.querySelector("span")!.textContent !== answer)!.click();
+      $('[data-action="next"]')!.click();
+    }
+    $('[data-action="home"]')!.click();
+    const learn = $('[data-action="learn"]') as HTMLButtonElement;
+    expect(learn.disabled).toBe(false);
+    expect(learn.textContent).toContain("5 Learning routes");
+
+    // A Learn round asks exactly those routes. Answer them all right once.
+    learn.click();
+    expect(app.textContent).toContain("Learn mode");
+    expect(app.textContent).toContain("Question 1 / 5");
+    const asked: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const number = $(".badge")!.textContent!;
+      asked.push(number);
+      const answer = routes.find((r) => r.number === number)!.name;
+      $$(".option").find((o) => o.querySelector("span")!.textContent === answer)!.click();
+      $('[data-action="next"]')!.click();
+    }
+    expect(asked.sort()).toEqual(missed.sort());
+    // One right answer isn't enough to leave Learning, so there's more to practise.
+    expect(app.textContent).toContain("5 routes still in Learning");
+
+    // A second correct round moves them all up to Known.
+    $('[data-action="learn"]')!.click();
+    for (let i = 0; i < 5; i++) {
+      const answer = routes.find((r) => r.number === $(".badge")!.textContent)!.name;
+      $$(".option").find((o) => o.querySelector("span")!.textContent === answer)!.click();
+      $('[data-action="next"]')!.click();
+    }
+    expect(app.textContent).toContain("cleared everything in Learning");
+    expect($('[data-action="learn"]')).toBeNull();
+  });
+
   it("saves progress and shows it on the start screen", async () => {
     await mount();
     expect($(".mastery")).toBeNull();

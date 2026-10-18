@@ -54,21 +54,23 @@ export function weightedSample<T>(items: readonly T[], count: number, weight: (i
 
 export interface QuizOptions {
   random?: Random;
-  /** Routes to ask about (the player's area); defaults to the whole city. */
+  /** The player's area: questions and, preferably, distractors come from here. Defaults to the whole city. */
   local?: readonly Route[];
+  /** Ask only about these routes (e.g. Learn mode); defaults to `local`. Distractors still come from `local`. */
+  ask?: readonly Route[];
   /** Relative chance of each route being picked; defaults to uniform. */
   weight?: (route: Route) => number;
 }
 
 /**
- * Build a round of `length` questions, each on a different route from `local`.
+ * Build a round of `length` questions, each on a different route from `ask` (default `local`).
  * Distractors come from `local` first, then the city.
  */
 export function buildQuiz(routes: readonly Route[], length: number, options: QuizOptions = {}): Question[] {
-  const { random = Math.random, local = routes, weight = () => 1 } = options;
-  if (length > local.length) throw new Error(`Only ${local.length} routes available`);
+  const { random = Math.random, local = routes, ask = local, weight = () => 1 } = options;
+  if (length > ask.length) throw new Error(`Only ${ask.length} routes available`);
   // Sampling decides which routes; shuffle so the weakest ones aren't always first.
-  return shuffle(weightedSample(local, length, weight, random), random).map((route) => ({
+  return shuffle(weightedSample(ask, length, weight, random), random).map((route) => ({
     route,
     options: shuffle([route.name, ...pickDistractors(route, routes, OPTION_COUNT - 1, random, local)], random),
   }));

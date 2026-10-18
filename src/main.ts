@@ -58,10 +58,14 @@ let progress = loadProgress();
 /** Each question's route level at the start of the round, to show what changed. */
 type LevelsBefore = Record<string, Level>;
 
+/** "learn" asks only about routes in the Learning stage. */
+type Mode = "quiz" | "learn";
+const LEARN_LENGTH = 15;
+
 type State =
   | { screen: "start" }
-  | { screen: "question"; length: number; questions: Question[]; index: number; answers: Answer[]; before: LevelsBefore }
-  | { screen: "results"; length: number; answers: Answer[]; before: LevelsBefore };
+  | { screen: "question"; mode: Mode; length: number; questions: Question[]; index: number; answers: Answer[]; before: LevelsBefore }
+  | { screen: "results"; mode: Mode; length: number; answers: Answer[]; before: LevelsBefore };
 
 let state: State = { screen: "start" };
 
@@ -99,13 +103,22 @@ function setState(next: State): void {
   render();
 }
 
-function start(length: number): void {
-  const questions = buildQuiz(routes, length, { local: activeRoutes(), weight: (r) => weightOf(progress, r.number) });
+/** Routes in the current scope that are in the Learning stage. */
+function learningRoutes(): Route[] {
+  return activeRoutes().filter((r) => levelOf(progress.routes[r.number]) === "learning");
+}
+
+function start(mode: Mode, requested: number): void {
+  // Learn mode drills Learning routes, ignoring rest times; weights still put misses first.
+  const ask = mode === "learn" ? learningRoutes() : activeRoutes();
+  const length = Math.min(requested, ask.length);
+  if (length === 0) return setState({ screen: "start" });
+  const questions = buildQuiz(routes, length, { local: activeRoutes(), ask, weight: (r) => weightOf(progress, r.number) });
   const before = Object.fromEntries(questions.map((q) => [q.route.number, levelOf(progress.routes[q.route.number])]));
   progress.round++;
   saveProgress(progress);
   startTimer();
-  setState({ screen: "question", length, questions, index: 0, answers: [], before });
+  setState({ screen: "question", mode, length: requested, questions, index: 0, answers: [], before });
 }
 
 function choose(optionIndex: number): void {
@@ -128,7 +141,7 @@ function next(): void {
     startTimer();
     setState({ ...state, index: state.index + 1 });
   } else {
-    setState({ screen: "results", length: state.length, answers: state.answers, before: state.before });
+    setState({ screen: "results", mode: state.mode, length: state.length, answers: state.answers, before: state.before });
   }
 }
 
@@ -161,6 +174,19 @@ function renderStartActions(): string {
       ${lengthOptions(pool.length)
         .map((n) => `<button class="btn btn-primary" data-action="start" data-length="${n}">${n} question${n === 1 ? "" : "s"}</button>`)
         .join("")}
+    </div>
+    ${renderLearnButton()}`;
+}
+
+function renderLearnButton(): string {
+  const count = learningRoutes().length;
+  const where = scope === "area" ? " in this area" : "";
+  return `
+    <div class="learn">
+      <button class="btn btn-learn" data-action="learn" ${count ? "" : "disabled"}>
+        Learn mode
+        <span>${count ? `Practise your ${count} Learning route${count === 1 ? "" : "s"}${where}` : `No routes in Learning${where} yet`}</span>
+      </button>
     </div>`;
 }
 
@@ -255,7 +281,7 @@ function renderQuestion(s: Extract<State, { screen: "question" }>): string {
   return `
     <section class="card">
       <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${s.index + 1}">
-        <span>Question ${s.index + 1} / ${total}</span>
+        <span>${s.mode === "learn" ? `<span class="mode-tag">Learn mode</span> ` : ""}Question ${s.index + 1} / ${total}</span>
         <span>Score ${score(s.answers)}</span>
         <div class="bar"><div style="width:${((s.index + (answer ? 1 : 0)) / total) * 100}%"></div></div>
       </div>
@@ -316,11 +342,25 @@ function renderResults(s: Extract<State, { screen: "results" }>): string {
              </ul>`
           : ""
       }
+      ${renderResultsActions(s)}
+    </section>`;
+}
+
+function renderResultsActions(s: Extract<State, { screen: "results" }>): string {
+  if (s.mode === "quiz") {
+    return `
       <div class="lengths">
         <button class="btn btn-primary" data-action="start" data-length="${s.length}">Play again</button>
         <button class="btn" data-action="home">Change quiz</button>
-      </div>
-    </section>`;
+      </div>`;
+  }
+  const left = learningRoutes().length;
+  return `
+    ${left ? `<p class="hint">${left} route${left === 1 ? "" : "s"} still in Learning. Each needs 2 right in a row to move up to Known.</p>` : `<p class="lede">You've cleared everything in Learning!</p>`}
+    <div class="lengths">
+      ${left ? `<button class="btn btn-primary" data-action="learn">Keep practising</button>` : ""}
+      <button class="btn${left ? "" : " btn-primary"}" data-action="home">Back to start</button>
+    </div>`;
 }
 
 /** Show the missed routes on a map, loading the map module if needed. */
@@ -384,7 +424,9 @@ app.addEventListener("click", (e) => {
   if (!el) return;
   switch (el.dataset.action) {
     case "start":
-      return start(Number(el.dataset.length));
+      return start("quiz", Number(el.dataset.length));
+    case "learn":
+      return start("learn", LEARN_LENGTH);
     case "choose":
       return choose(Number(el.dataset.index));
     case "next":
