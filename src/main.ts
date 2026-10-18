@@ -183,7 +183,7 @@ function renderProgressPanel(pool: Route[]): string {
       </div>
       <div class="mastery-bar" role="img" aria-label="${LEVELS.map((l) => `${counts[l]} ${LEVEL_LABELS[l]}`).join(", ")}">${segments}</div>
       <ul class="mastery-legend">${legend}</ul>
-      <p class="hint">Instant means right 3 times in a row, each in under ${FAST_MS / 1000} seconds. Weaker routes come up more often.</p>
+      <p class="hint">Instant means right 3 times in a row, each in under ${FAST_MS / 1000} seconds. Missed routes come back soon; ones you know rest for a while.</p>
     </div>`;
 }
 

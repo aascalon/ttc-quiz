@@ -62,17 +62,44 @@ export function recordAnswer(progress: Progress, number: string, correct: boolea
   return next;
 }
 
-// Learning is weighted well above New so missed routes come back soon even when hundreds are unseen.
-const LEVEL_WEIGHTS: Record<Level, number> = { learning: 20, new: 3, known: 1.5, instant: 0.4 };
+// Tuned by simulating players (see the progress tests): these keep re-asks of routes the
+// player has already shown they know low without slowing down finding the ones they don't.
+export const WEIGHTS = {
+  /** Last answer wrong: bring it back soon. */
+  missed: 25,
+  /** Never asked: some exploring is needed to find what you don't know. */
+  new: 3,
+  /** Right last time, and its wait is over. A slow answer may have been a guess. */
+  dueSlow: 6,
+  dueFast: 1,
+  /** Right last time and still within its wait. */
+  resting: 0.05,
+};
+
+const MAX_REST_ROUNDS = 32;
+
+/**
+ * Rounds to wait before re-asking a route answered correctly, doubling with each correct
+ * answer in a row. Fast answers are strong evidence (a guess is rarely also quick), so they
+ * count triple. E.g. one slow answer: 2 rounds, one fast answer: 8, Instant: the cap of 32.
+ */
+export function restRounds(stats: RouteStats): number {
+  return Math.min(2 ** (stats.streak + 2 * stats.fastStreak), MAX_REST_ROUNDS);
+}
 
 /**
  * How strongly to favour a route when picking the next round (started as round
- * `progress.round + 1`): weakest first, and less of what you just saw last round.
+ * `progress.round + 1`). A simple spaced-repetition scheme: misses come back soon,
+ * correct answers rest for longer the more convincing they were.
  */
 export function weightOf(progress: Progress, number: string): number {
   const stats = progress.routes[number];
-  const base = LEVEL_WEIGHTS[levelOf(stats)];
-  return stats && stats.lastRound === progress.round ? base * 0.2 : base;
+  if (!stats || stats.seen === 0) return WEIGHTS.new;
+  // 0 means it was answered in the round that just finished.
+  const roundsSince = progress.round - stats.lastRound;
+  if (stats.streak === 0) return roundsSince === 0 ? WEIGHTS.missed * 0.3 : WEIGHTS.missed;
+  if (roundsSince < restRounds(stats)) return WEIGHTS.resting;
+  return stats.fastStreak > 0 ? WEIGHTS.dueFast : WEIGHTS.dueSlow;
 }
 
 export function countLevels(progress: Progress, numbers: Iterable<string>): Record<Level, number> {
