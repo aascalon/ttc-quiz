@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Quiz yourself on Toronto Transit Commission routes." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>TTC Quiz</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="logo" href="./">TTC <span>Quiz</span></a>
+    </header>
+    <main id="app" aria-live="polite"></main>
+    <footer class="site-footer">
+      Route data from the
+      <a href="https://open.toronto.ca/dataset/ttc-routes-and-schedules/">TTC Routes and Schedules</a>
+      dataset, City of Toronto Open Data, under the
+      <a href="https://open.toronto.ca/open-data-licence/">Open Government Licence – Toronto</a>.
+      Not affiliated with the TTC.
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

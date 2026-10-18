@@ -1,0 +1,1382 @@
+[
+  {
+    "number": "7",
+    "name": "Bathurst",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "8",
+    "name": "Broadview",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "9",
+    "name": "Bellamy",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "10",
+    "name": "Van Horne",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "11",
+    "name": "Bayview",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "12",
+    "name": "Kingston Rd",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "13",
+    "name": "Avenue Rd",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "14",
+    "name": "Glencairn",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "15",
+    "name": "Evans",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "16",
+    "name": "McCowan",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "17",
+    "name": "Birchmount",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "18",
+    "name": "Caledonia",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "19",
+    "name": "Bay",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "20",
+    "name": "Cliffside",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "21",
+    "name": "Brimley",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "22",
+    "name": "Coxwell",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "23",
+    "name": "Dawes",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "24",
+    "name": "Victoria Park",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "25",
+    "name": "Don Mills",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "26",
+    "name": "Dupont",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "27",
+    "name": "Jane South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "28",
+    "name": "Bayview South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "29",
+    "name": "Dufferin",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "30",
+    "name": "High Park North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "31",
+    "name": "Greenwood",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "32",
+    "name": "Eglinton West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "33",
+    "name": "Forest Hill",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "34",
+    "name": "Eglinton",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "35",
+    "name": "Jane",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "36",
+    "name": "Finch West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "37",
+    "name": "Islington",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "38",
+    "name": "Highland Creek",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "39",
+    "name": "Finch East",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "40",
+    "name": "Junction-Dundas West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "41",
+    "name": "Keele",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "42",
+    "name": "Cummer",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "43",
+    "name": "Kennedy",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "44",
+    "name": "Kipling South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "45",
+    "name": "Kipling",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "46",
+    "name": "Martin Grove",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "47",
+    "name": "Lansdowne",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "48",
+    "name": "Rathburn",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "49",
+    "name": "Bloor West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "50",
+    "name": "Burnhamthorpe",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "51",
+    "name": "Leslie",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "52",
+    "name": "Lawrence West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "53",
+    "name": "Steeles East",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "54",
+    "name": "Lawrence East",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "55",
+    "name": "Warren Park",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "57",
+    "name": "Midland",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "59",
+    "name": "Maple Leaf",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "60",
+    "name": "Steeles West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "61",
+    "name": "Avenue Rd North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "62",
+    "name": "Mortimer",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "63",
+    "name": "Ossington",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "64",
+    "name": "Main",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "65",
+    "name": "Parliament",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "66",
+    "name": "Prince Edward",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "67",
+    "name": "Pharmacy",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "68",
+    "name": "Warden",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "69",
+    "name": "Warden South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "70",
+    "name": "O'Connor",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "71",
+    "name": "Runnymede",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "72",
+    "name": "Pape",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "73",
+    "name": "Royal York",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "74",
+    "name": "Mount Pleasant",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "75",
+    "name": "Sherbourne",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "76",
+    "name": "Royal York South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "77",
+    "name": "Swansea",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "78",
+    "name": "St Andrews",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "79",
+    "name": "Scarlett Rd",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "80",
+    "name": "Queensway",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "82",
+    "name": "Rosedale",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "83",
+    "name": "Jones",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "84",
+    "name": "Sheppard West",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "85",
+    "name": "Sheppard East",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "86",
+    "name": "Scarborough",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "87",
+    "name": "Cosburn",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "88",
+    "name": "South Leaside",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "89",
+    "name": "Weston",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "90",
+    "name": "Vaughan",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "91",
+    "name": "Woodbine",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "92",
+    "name": "Woodbine South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "93",
+    "name": "Parkview Hills",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "94",
+    "name": "Wellesley",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "95",
+    "name": "York Mills",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "96",
+    "name": "Wilson",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "97",
+    "name": "Yonge",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "98",
+    "name": "Willowdale-Senlac",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "99",
+    "name": "Arrow Rd",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "100",
+    "name": "Flemingdon Park",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "101",
+    "name": "Downsview Park",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "102",
+    "name": "Markham Rd",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "103",
+    "name": "Mount Pleasant North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "104",
+    "name": "Faywood",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "105",
+    "name": "Dufferin North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "106",
+    "name": "Sentinel",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "107",
+    "name": "Alness-Chesswood",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "108",
+    "name": "Driftwood",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "109",
+    "name": "Ranee",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "110",
+    "name": "Islington South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "111",
+    "name": "East Mall",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "112",
+    "name": "West Mall",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "113",
+    "name": "Danforth",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "114",
+    "name": "Queens Quay East",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "115",
+    "name": "Silver Hills",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "116",
+    "name": "Morningside",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "117",
+    "name": "Birchmount South",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "118",
+    "name": "Thistle Down",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "119",
+    "name": "Torbarrie",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "120",
+    "name": "Calvington",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "121",
+    "name": "Esplanade-River",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "122",
+    "name": "Graydon Hall",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "123",
+    "name": "Sherway",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "124",
+    "name": "Sunnybrook",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "125",
+    "name": "Drewry",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "126",
+    "name": "Christie",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "127",
+    "name": "Davenport",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "129",
+    "name": "McCowan North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "130",
+    "name": "Middlefield",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "131",
+    "name": "Nugget",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "132",
+    "name": "Milner",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "133",
+    "name": "Neilson",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "134",
+    "name": "Progress",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "135",
+    "name": "Gerrard",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "145",
+    "name": "Belfield",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "149",
+    "name": "Etobicoke-Bloor",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "151",
+    "name": "Leslie North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "154",
+    "name": "Curran Hall",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "156",
+    "name": "Millwood",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "158",
+    "name": "Trethewey",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "160",
+    "name": "Bathurst North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "161",
+    "name": "Rogers Rd",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "162",
+    "name": "Lawrence-Donway",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "164",
+    "name": "Castlefield",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "165",
+    "name": "Weston Rd North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "166",
+    "name": "Toryork",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "167",
+    "name": "Pharmacy North",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "168",
+    "name": "Symington",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "169",
+    "name": "Huntingwood",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "171",
+    "name": "Mount Dennis",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "184",
+    "name": "Ancaster Park",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "185",
+    "name": "Sheppard Central",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "189",
+    "name": "Stockyards",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "191",
+    "name": "Underhill",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "200",
+    "name": "Toronto Zoo",
+    "mode": "bus",
+    "color": "#E472AC"
+  },
+  {
+    "number": "201",
+    "name": "Bluffer's Park",
+    "mode": "bus",
+    "color": "#E472AC"
+  },
+  {
+    "number": "202",
+    "name": "Cherry Beach",
+    "mode": "bus",
+    "color": "#E472AC"
+  },
+  {
+    "number": "203",
+    "name": "High Park",
+    "mode": "bus",
+    "color": "#E472AC"
+  },
+  {
+    "number": "300",
+    "name": "Bloor-Danforth",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "301",
+    "name": "Queen",
+    "mode": "streetcar",
+    "color": "#0054A6"
+  },
+  {
+    "number": "304",
+    "name": "King",
+    "mode": "streetcar",
+    "color": "#0054A6"
+  },
+  {
+    "number": "305",
+    "name": "Dundas",
+    "mode": "streetcar",
+    "color": "#0054A6"
+  },
+  {
+    "number": "306",
+    "name": "Carlton",
+    "mode": "streetcar",
+    "color": "#0054A6"
+  },
+  {
+    "number": "307",
+    "name": "Bathurst",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "310",
+    "name": "Spadina",
+    "mode": "streetcar",
+    "color": "#0054A6"
+  },
+  {
+    "number": "312",
+    "name": "St Clair",
+    "mode": "streetcar",
+    "color": "#0054A6"
+  },
+  {
+    "number": "315",
+    "name": "Evans-Brown's Line",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "316",
+    "name": "Kingston Rd-McCowan",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "320",
+    "name": "Yonge",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "322",
+    "name": "Coxwell",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "324",
+    "name": "Victoria Park",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "325",
+    "name": "Don Mills",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "329",
+    "name": "Dufferin",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "334",
+    "name": "Eglinton",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "335",
+    "name": "Jane",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "336",
+    "name": "Finch West",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "337",
+    "name": "Islington",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "339",
+    "name": "Finch East",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "340",
+    "name": "Junction",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "341",
+    "name": "Keele",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "343",
+    "name": "Kennedy",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "345",
+    "name": "Kipling",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "352",
+    "name": "Lawrence West",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "353",
+    "name": "Steeles",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "354",
+    "name": "Lawrence East",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "363",
+    "name": "Ossington",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "365",
+    "name": "Parliament",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "373",
+    "name": "Royal York",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "384",
+    "name": "Sheppard West",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "385",
+    "name": "Sheppard East",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "386",
+    "name": "Scarborough",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "395",
+    "name": "York Mills",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "396",
+    "name": "Wilson",
+    "mode": "bus",
+    "color": "#0054A6"
+  },
+  {
+    "number": "400",
+    "name": "Lawrence Manor",
+    "mode": "bus",
+    "color": "#6D6E71"
+  },
+  {
+    "number": "402",
+    "name": "Parkdale",
+    "mode": "bus",
+    "color": "#6D6E71"
+  },
+  {
+    "number": "403",
+    "name": "South Don Mills",
+    "mode": "bus",
+    "color": "#6D6E71"
+  },
+  {
+    "number": "404",
+    "name": "East York",
+    "mode": "bus",
+    "color": "#6D6E71"
+  },
+  {
+    "number": "405",
+    "name": "Etobicoke",
+    "mode": "bus",
+    "color": "#6D6E71"
+  },
+  {
+    "number": "406",
+    "name": "Scarborough-Guildwood",
+    "mode": "bus",
+    "color": "#6D6E71"
+  },
+  {
+    "number": "501",
+    "name": "Queen",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "503",
+    "name": "Kingston Rd",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "504",
+    "name": "King",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "505",
+    "name": "Dundas",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "506",
+    "name": "Carlton",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "507",
+    "name": "Long Branch",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "508",
+    "name": "Lake Shore",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "509",
+    "name": "Harbourfront",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "510",
+    "name": "Spadina",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "511",
+    "name": "Bathurst",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "512",
+    "name": "St Clair",
+    "mode": "streetcar",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "830",
+    "name": "Henry Kelsey - Middlefield",
+    "mode": "bus",
+    "color": "#ED1C24"
+  },
+  {
+    "number": "900",
+    "name": "Airport Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "902",
+    "name": "Markham Rd Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "903",
+    "name": "Kennedy Stn-Scarborough Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "904",
+    "name": "Sheppard-Kennedy Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "905",
+    "name": "Eglinton East Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "906",
+    "name": "Airport-Humber College Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "924",
+    "name": "Victoria Park Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "925",
+    "name": "Don Mills Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "927",
+    "name": "Highway 27 Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "929",
+    "name": "Dufferin Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "935",
+    "name": "Jane Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "937",
+    "name": "Islington Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "938",
+    "name": "Highland Creek Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "939",
+    "name": "Finch Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "941",
+    "name": "Keele Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "944",
+    "name": "Kipling South Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "945",
+    "name": "Kipling Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "952",
+    "name": "Lawrence West Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "953",
+    "name": "Steeles East Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "954",
+    "name": "Lawrence East Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "960",
+    "name": "Steeles West Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "968",
+    "name": "Warden Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "984",
+    "name": "Sheppard West Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "985",
+    "name": "Sheppard East Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "986",
+    "name": "Scarborough Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "989",
+    "name": "Weston Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "995",
+    "name": "York Mills Express",
+    "mode": "bus",
+    "color": "#00A651"
+  },
+  {
+    "number": "996",
+    "name": "Wilson Express",
+    "mode": "bus",
+    "color": "#00A651"
+  }
+]
