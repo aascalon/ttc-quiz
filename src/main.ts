@@ -324,12 +324,12 @@ function renderResults(s: Extract<State, { screen: "results" }>): string {
 }
 
 /** Show the missed routes on a map, loading the map module if needed. */
-function mountMissedMap(missed: Route[]): void {
+function mountMissedMap(numbers: string[]): void {
   import("./map")
     .then(({ createMissedMap }) => {
       const slot = document.querySelector<HTMLElement>("#missed-map-slot");
       if (!slot || missedMap) return; // Left the results screen while loading.
-      missedMap = createMissedMap(missed, scope === "area" ? area : null);
+      missedMap = createMissedMap(numbers, scope === "area" ? area : null);
       slot.replaceChildren(missedMap.element);
       missedMap.refresh();
       // A route may have been picked from the list while the map was loading.
@@ -357,7 +357,7 @@ function render(): void {
   app.querySelector<HTMLElement>("[autofocus]")?.focus();
   if (state.screen === "start" && scope === "area") mountPicker();
   if (state.screen === "results") {
-    const missed = state.answers.filter((a) => !a.correct).map((a) => a.question.route);
+    const missed = state.answers.filter((a) => !a.correct).map((a) => a.question.route.number);
     if (missed.length) mountMissedMap(missed);
   }
 }

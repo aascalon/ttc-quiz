@@ -65,3 +65,41 @@ export function linesTouchPolygon(lines: LatLon[][], polygon: Polygon): boolean 
   }
   return false;
 }
+
+/** Points along a line no more than `step` degrees apart (including its vertices). */
+export function densify(line: LatLon[], step: number): LatLon[] {
+  const out: LatLon[] = [line[0]];
+  for (let k = 1; k < line.length; k++) {
+    const [a, b] = [line[k - 1], line[k]];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+    for (let s = 1; s <= n; s++) out.push([a[0] + ((b[0] - a[0]) * s) / n, a[1] + ((b[1] - a[1]) * s) / n]);
+  }
+  return out;
+}
+
+/** Preferred label spots, as fractions along a route's stretch: the middle first, then outwards. */
+const LABEL_FRACTIONS = [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9];
+
+/**
+ * Candidate label positions for a route, best first: along its longest stretch inside
+ * `area` (routes often run far beyond it), or else along its longest line. Several
+ * candidates let labels dodge each other, e.g. day and Blue Night routes on the same street.
+ */
+export function labelCandidates(lines: LatLon[][], area: Polygon | null): LatLon[] {
+  let path: LatLon[] = [];
+  if (area) {
+    for (const line of lines) {
+      let run: LatLon[] = [];
+      for (const p of densify(line, 0.0005)) {
+        if (!pointInPolygon(p, area)) {
+          run = [];
+          continue;
+        }
+        run.push(p);
+        if (run.length > path.length) path = run;
+      }
+    }
+  }
+  if (!path.length) path = densify(lines.reduce((a, b) => (b.length > a.length ? b : a)), 0.0005);
+  return LABEL_FRACTIONS.map((f) => path[Math.round(f * (path.length - 1))]);
+}

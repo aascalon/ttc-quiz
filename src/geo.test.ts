@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { routesInArea } from "./areas";
-import { decodePolyline, linesTouchPolygon, pointInPolygon, type Polygon } from "./geo";
+import { decodePolyline, labelCandidates, linesTouchPolygon, pointInPolygon, type Polygon } from "./geo";
 // @ts-expect-error -- plain JS build script
 import { encodePolyline, mergeShapes, simplify } from "../scripts/shapes.mjs";
 
@@ -57,5 +57,34 @@ describe("routesInArea (real data)", () => {
     const found = routesInArea(downtown);
     for (const n of ["501", "504", "505", "506", "510", "511"]) expect(found.has(n)).toBe(true);
     for (const n of ["939", "53", "116"]) expect(found.has(n)).toBe(false);
+  });
+});
+
+describe("labelCandidates", () => {
+  // A line running west to east through the middle of the unit square, extending far beyond it.
+  const line: [number, number][] = [
+    [0.5, -10],
+    [0.5, 10],
+  ];
+
+  it("keeps every candidate inside the area, best (the middle) first", () => {
+    const candidates = labelCandidates([line], square);
+    for (const c of candidates) expect(pointInPolygon(c, square)).toBe(true);
+    expect(candidates[0][1]).toBeCloseTo(0.5, 2);
+    expect(new Set(candidates.map((c) => c.join())).size).toBe(candidates.length);
+  });
+
+  it("falls back to the longest line when the route misses the area", () => {
+    const far: Polygon = [
+      [5, 5],
+      [5, 6],
+      [6, 6],
+      [6, 5],
+    ];
+    for (const area of [null, far]) {
+      const [lat, lon] = labelCandidates([line], area)[0];
+      expect(lat).toBeCloseTo(0.5, 5);
+      expect(lon).toBeCloseTo(0, 5);
+    }
   });
 });

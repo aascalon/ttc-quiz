@@ -1,36 +1,128 @@
-// OpenStreetMap maps of the route network, loaded on demand:
-// - the area picker, where the player taps out a polygon and the routes through it light up;
-// - the results map, highlighting the routes the player missed.
+// OpenStreetMap maps of the route network, loaded on demand. Both maps are a RouteMap
+// (every route drawn faintly, some highlighted and labelled, optionally an area outline):
+// - the area picker adds drawing, highlighting the routes through the drawn area;
+// - the results map highlights the routes the player missed.
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { routeShapes, routesInArea } from "./areas";
-import type { LatLon, Polygon } from "./geo";
+import routesData from "./data/routes.json";
+import { labelCandidates, type LatLon, type Polygon } from "./geo";
+import type { Route } from "./types";
 
-export interface AreaPicker {
-  element: HTMLElement;
-  /** Call after the element is (re)attached to the page so the map sizes itself. */
-  refresh(): void;
-}
+const routeColors = new Map((routesData as Route[]).map((r) => [r.number, r.color]));
 
 const IDLE = { color: "#8a8a8a", weight: 1.5, opacity: 0.55 };
 const ACTIVE = { color: "#da251d", weight: 3.5, opacity: 0.95 };
 const AREA = { color: "#1f4fbf", weight: 2, fillOpacity: 0.08, interactive: false };
 const CLOSE_PX = 18;
 
-/** A map with OSM tiles and every route drawn faintly. */
-function createNetworkMap(container: HTMLElement, options: L.MapOptions = {}) {
-  const map = L.map(container, { preferCanvas: true, zoomSnap: 0.5, ...options }).setView([43.7, -79.4], 11);
+interface RouteMap {
+  map: L.Map;
+  networkBounds: L.LatLngBounds;
+  /** Highlight and label these routes, outlining `area` if given (labels sit inside it). */
+  show(numbers: Iterable<string>, area: Polygon | null): void;
+  /** Emphasise one highlighted route and fade the others, or reset with null. */
+  focus(number: string | null): void;
+  /** Bounds of the highlighted routes, if any. */
+  highlightBounds(): L.LatLngBounds | null;
+}
+
+interface RouteMapOptions {
+  map?: L.MapOptions;
+  /**
+   * When a label has no clear spot: hide it (for many labels, where a crowd is unreadable)
+   * or show it overlapping (for a few labels that all matter).
+   */
+  crowdedLabels: "hide" | "overlap";
+}
+
+function createRouteMap(container: HTMLElement, { map: mapOptions, crowdedLabels }: RouteMapOptions): RouteMap {
+  const map = L.map(container, { preferCanvas: true, zoomSnap: 0.5, ...mapOptions }).setView([43.7, -79.4], 11);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
-  const routeLayers = new Map<string, L.Polyline>();
+  const layers = new Map<string, L.Polyline>();
   for (const [number, lines] of Object.entries(routeShapes)) {
-    routeLayers.set(number, L.polyline(lines, { ...IDLE, interactive: false }).addTo(map));
+    layers.set(number, L.polyline(lines, { ...IDLE, interactive: false }).addTo(map));
   }
-  const networkBounds = L.featureGroup([...routeLayers.values()]).getBounds();
-  return { map, routeLayers, networkBounds };
+  const networkBounds = L.featureGroup([...layers.values()]).getBounds();
+  const border = L.polygon([], AREA).addTo(map);
+  const labels = new Map<string, { tooltip: L.Tooltip; candidates: LatLon[] }>();
+  let shown: string[] = [];
+  let focused: string | null = null;
+
+  /**
+   * Place each label at its first candidate spot that is on screen and clear of labels
+   * already placed (the focused route goes first). With no clear spot, hide or overlap
+   * as `crowdedLabels` says.
+   */
+  function layoutLabels(): void {
+    const size = map.getSize();
+    const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    const order = focused ? [focused, ...shown.filter((n) => n !== focused)] : shown;
+    for (const n of order) {
+      const { tooltip, candidates } = labels.get(n)!;
+      const el = tooltip.getElement();
+      if (!el) continue;
+      const [w, h] = [el.offsetWidth + 4, el.offsetHeight + 4];
+      const spots = candidates.map((c) => {
+        const p = map.latLngToContainerPoint(c);
+        return { c, box: { x1: p.x - w / 2, y1: p.y - h / 2, x2: p.x + w / 2, y2: p.y + h / 2 } };
+      });
+      const onScreen = spots.filter(({ box }) => box.x1 >= 0 && box.y1 >= 0 && box.x2 <= size.x && box.y2 <= size.y);
+      const clear = onScreen.find(({ box }) => !placed.some((b) => box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1));
+      const spot = clear ?? (crowdedLabels === "overlap" ? (onScreen[0] ?? spots[0]) : undefined);
+      el.style.visibility = spot ? "" : "hidden";
+      if (!spot) continue;
+      tooltip.setLatLng(spot.c);
+      placed.push(spot.box);
+    }
+  }
+  map.on("zoomend moveend resize", layoutLabels);
+
+  return {
+    map,
+    networkBounds,
+    show(numbers, area) {
+      for (const n of shown) layers.get(n)!.setStyle(IDLE);
+      for (const { tooltip } of labels.values()) tooltip.remove();
+      labels.clear();
+      border.setLatLngs(area ?? []);
+      focused = null;
+
+      shown = [...numbers].filter((n) => layers.has(n));
+      for (const n of shown) {
+        layers.get(n)!.setStyle(ACTIVE).bringToFront();
+        const candidates = labelCandidates(routeShapes[n], area);
+        const tooltip = L.tooltip({ permanent: true, direction: "center", className: "route-label", interactive: false, opacity: 1 })
+          .setLatLng(candidates[0])
+          .setContent(n)
+          .addTo(map);
+        tooltip.getElement()?.style.setProperty("--route-color", routeColors.get(n) ?? ACTIVE.color);
+        labels.set(n, { tooltip, candidates });
+      }
+      layoutLabels();
+    },
+    focus(number) {
+      focused = number && shown.includes(number) ? number : null;
+      for (const n of shown) {
+        const on = number === null || n === number;
+        layers.get(n)!.setStyle(n === number ? { ...ACTIVE, weight: 6 } : on ? ACTIVE : { ...ACTIVE, weight: 2, opacity: 0.2 });
+        // Leaflet sets label opacity inline, so it has to go through setOpacity rather than CSS.
+        const { tooltip } = labels.get(n)!;
+        tooltip.setOpacity(on ? 1 : 0.3);
+        tooltip.getElement()?.classList.toggle("is-focus", n === number);
+      }
+      if (focused) layers.get(focused)!.bringToFront();
+      // The focused route's label gets first pick of spots, so it's never the hidden one.
+      layoutLabels();
+    },
+    highlightBounds() {
+      return shown.length ? L.featureGroup(shown.map((n) => layers.get(n)!)).getBounds() : null;
+    },
+  };
 }
 
 /** Fits the view the first time the map is on the page (it has no size before that). */
@@ -42,6 +134,12 @@ function fitOnFirstRefresh(element: HTMLElement, map: L.Map, fit: () => void): (
     fitted = true;
     fit();
   };
+}
+
+export interface AreaPicker {
+  element: HTMLElement;
+  /** Call after the element is (re)attached to the page so the map sizes itself. */
+  refresh(): void;
 }
 
 export function createAreaPicker(
@@ -63,31 +161,28 @@ export function createAreaPicker(
   const doneBtn = element.querySelector<HTMLButtonElement>('[data-map="done"]')!;
   const clearBtn = element.querySelector<HTMLButtonElement>('[data-map="clear"]')!;
 
-  const { map, routeLayers, networkBounds } = createNetworkMap(element.querySelector<HTMLElement>(".map")!, {
-    doubleClickZoom: false,
+  const routeMap = createRouteMap(element.querySelector<HTMLElement>(".map")!, {
+    map: { doubleClickZoom: false },
+    crowdedLabels: "hide",
   });
+  const { map } = routeMap;
 
   let points: LatLon[] = initial ? [...initial] : [];
   let closed = Boolean(initial);
-  const draft = L.polyline([], { color: "#1f4fbf", weight: 2, dashArray: "6 6", interactive: false }).addTo(map);
-  const shape = L.polygon([], AREA).addTo(map);
+  const draft = L.polyline([], { color: AREA.color, weight: 2, dashArray: "6 6", interactive: false }).addTo(map);
   const vertices = L.layerGroup().addTo(map);
 
   function update(): void {
     vertices.clearLayers();
     if (!closed) {
       points.forEach((p, i) =>
-        L.circleMarker(p, { radius: i === 0 ? 7 : 5, color: "#1f4fbf", fillColor: "#fff", fillOpacity: 1, weight: 2, interactive: false }).addTo(vertices),
+        L.circleMarker(p, { radius: i === 0 ? 7 : 5, color: AREA.color, fillColor: "#fff", fillOpacity: 1, weight: 2, interactive: false }).addTo(vertices),
       );
     }
     draft.setLatLngs(closed ? [] : points);
-    shape.setLatLngs(closed ? points : []);
 
     const numbers = closed ? routesInArea(points) : new Set<string>();
-    for (const [number, layer] of routeLayers) {
-      layer.setStyle(numbers.has(number) ? ACTIVE : IDLE);
-      if (numbers.has(number)) layer.bringToFront();
-    }
+    routeMap.show(numbers, closed ? points : null);
 
     doneBtn.disabled = closed || points.length < 3;
     clearBtn.disabled = points.length === 0;
@@ -129,7 +224,7 @@ export function createAreaPicker(
     element,
     refresh: fitOnFirstRefresh(element, map, () => {
       if (initial) map.fitBounds(L.latLngBounds(initial), { padding: [24, 24], maxZoom: 15, animate: false });
-      else map.fitBounds(networkBounds, { padding: [8, 8], animate: false });
+      else map.fitBounds(routeMap.networkBounds, { padding: [8, 8], animate: false });
     }),
   };
 }
@@ -142,66 +237,22 @@ export interface MissedMap {
   destroy(): void;
 }
 
-/** The point halfway along a line, for placing its label. */
-function midpoint(line: LatLon[]): LatLon {
-  const seg = (k: number) => Math.hypot(line[k][0] - line[k - 1][0], line[k][1] - line[k - 1][1]);
-  let total = 0;
-  for (let k = 1; k < line.length; k++) total += seg(k);
-  let remaining = total / 2;
-  for (let k = 1; k < line.length; k++) {
-    const d = seg(k);
-    if (remaining <= d && d > 0) {
-      const t = remaining / d;
-      return [line[k - 1][0] + (line[k][0] - line[k - 1][0]) * t, line[k - 1][1] + (line[k][1] - line[k - 1][1]) * t];
-    }
-    remaining -= d;
-  }
-  return line[0];
-}
-
-/**
- * Results map: the routes the player missed, labelled with their numbers in sign colours
- * (matching the review list), over the faint network and their area, if any.
- */
-export function createMissedMap(routes: { number: string; color: string }[], area: Polygon | null): MissedMap {
+/** Results map: the routes the player missed, and their area if they played one. */
+export function createMissedMap(numbers: string[], area: Polygon | null): MissedMap {
   const element = document.createElement("div");
   element.className = "map map-results";
-  const { map, routeLayers, networkBounds } = createNetworkMap(element, { scrollWheelZoom: false });
-  if (area) L.polygon(area, AREA).addTo(map);
-
-  const missed = routes.filter((r) => routeLayers.has(r.number)).map((r) => r.number);
-  const labels = new Map<string, L.Tooltip>();
-  for (const { number: n, color } of routes) {
-    const layer = routeLayers.get(n);
-    if (!layer) continue;
-    layer.setStyle(ACTIVE).bringToFront();
-    const longest = routeShapes[n].reduce((a, b) => (b.length > a.length ? b : a));
-    const label = L.tooltip({ permanent: true, direction: "center", className: "route-label", interactive: false, opacity: 1 })
-      .setLatLng(midpoint(longest))
-      .setContent(n)
-      .addTo(map);
-    label.getElement()?.style.setProperty("--route-color", color);
-    labels.set(n, label);
-  }
+  const routeMap = createRouteMap(element, { map: { scrollWheelZoom: false }, crowdedLabels: "overlap" });
+  routeMap.show(numbers, area);
 
   return {
     element,
-    refresh: fitOnFirstRefresh(element, map, () => {
-      const bounds = missed.length ? L.featureGroup(missed.map((n) => routeLayers.get(n)!)).getBounds() : networkBounds;
-      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 15, animate: false });
+    refresh: fitOnFirstRefresh(element, routeMap.map, () => {
+      const bounds = routeMap.highlightBounds() ?? routeMap.networkBounds;
+      routeMap.map.fitBounds(bounds, { padding: [24, 24], maxZoom: 15, animate: false });
     }),
-    focus(number) {
-      for (const n of missed) {
-        const on = number === null || n === number;
-        routeLayers.get(n)!.setStyle(n === number ? { ...ACTIVE, weight: 6 } : on ? ACTIVE : { ...ACTIVE, weight: 2, opacity: 0.2 });
-        // Leaflet sets label opacity inline, so it has to go through setOpacity rather than CSS.
-        labels.get(n)!.setOpacity(on ? 1 : 0.3);
-        labels.get(n)!.getElement()?.classList.toggle("is-focus", n === number);
-      }
-      if (number && routeLayers.has(number)) routeLayers.get(number)!.bringToFront();
-    },
+    focus: routeMap.focus,
     destroy() {
-      map.remove();
+      routeMap.map.remove();
     },
   };
 }
