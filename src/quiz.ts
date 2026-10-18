@@ -60,6 +60,8 @@ export interface QuizOptions {
   ask?: readonly Route[];
   /** Relative chance of each route being picked; defaults to uniform. */
   weight?: (route: Route) => number;
+  /** Whether to generate multiple-choice options (not needed when the answer is typed). */
+  choices?: boolean;
 }
 
 /**
@@ -67,12 +69,12 @@ export interface QuizOptions {
  * Distractors come from `local` first, then the city.
  */
 export function buildQuiz(routes: readonly Route[], length: number, options: QuizOptions = {}): Question[] {
-  const { random = Math.random, local = routes, ask = local, weight = () => 1 } = options;
+  const { random = Math.random, local = routes, ask = local, weight = () => 1, choices = true } = options;
   if (length > ask.length) throw new Error(`Only ${ask.length} routes available`);
   // Sampling decides which routes; shuffle so the weakest ones aren't always first.
   return shuffle(weightedSample(ask, length, weight, random), random).map((route) => ({
     route,
-    options: shuffle([route.name, ...pickDistractors(route, routes, OPTION_COUNT - 1, random, local)], random),
+    options: choices ? shuffle([route.name, ...pickDistractors(route, routes, OPTION_COUNT - 1, random, local)], random) : [],
   }));
 }
 

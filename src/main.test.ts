@@ -136,6 +136,71 @@ describe("quiz UI", () => {
     expect($('[data-action="learn"]')).toBeNull();
   });
 
+  describe("name → number", () => {
+    const typeAnswer = (value: string) => {
+      const input = $(".typed-input") as HTMLInputElement;
+      input.value = value;
+      $('[data-form="typed"]')!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    };
+    const currentRoute = () => {
+      const name = $(".badge-name")!.textContent!;
+      const kind = $(".prompt p")!.textContent!;
+      // The name plus its description picks out exactly one route.
+      return routes.find((r) => r.name === name && kind.includes(r.mode) && (kind.includes("Blue Night") === (r.color === "#0054A6")))!;
+    };
+
+    it("swaps direction from the start screen and remembers it", async () => {
+      await mount();
+      expect($("h1")!.textContent).toBe("Name that route");
+      $('[data-action="swap"]')!.click();
+      expect($("h1")!.textContent).toBe("Number that route");
+      expect($(".direction")!.textContent).toContain("You type");
+      expect(localStorage.getItem("ttc-quiz:direction")).toBe("name-to-number");
+      await mount();
+      expect($("h1")!.textContent).toBe("Number that route");
+    });
+
+    it("plays a typed round, scoring exact numbers only", async () => {
+      const app = await mount();
+      $('[data-action="swap"]')!.click();
+      $('[data-length="5"]')!.click();
+      expect($$(".option")).toHaveLength(0);
+      for (let i = 0; i < 5; i++) {
+        const route = currentRoute();
+        typeAnswer(i < 2 ? route.number : "999");
+        expect($(".typed-input")!.classList.contains(i < 2 ? "correct" : "wrong")).toBe(true);
+        if (i >= 2) expect($(".feedback")!.textContent).toContain(`It's ${route.number}`);
+        key("Enter");
+      }
+      expect($("h1")!.textContent).toBe("2 / 5");
+      expect(app.textContent).toContain("You typed 999 (no such route)");
+    });
+
+    it("ignores an empty answer", async () => {
+      await mount();
+      $('[data-action="swap"]')!.click();
+      $('[data-length="5"]')!.click();
+      typeAnswer("   ");
+      expect($(".feedback")).toBeNull();
+    });
+
+    it("keeps progress separate for each direction", async () => {
+      await mount();
+      $('[data-action="swap"]')!.click();
+      $('[data-length="5"]')!.click();
+      for (let i = 0; i < 5; i++) {
+        typeAnswer("999");
+        key("Enter");
+      }
+      $('[data-action="home"]')!.click();
+      expect($(".mastery-legend")!.textContent).toMatch(/Learning\s*5/);
+      $('[data-action="swap"]')!.click();
+      expect($(".mastery")).toBeNull(); // number → name untouched
+      expect(localStorage.getItem("ttc-quiz:progress")).toBeNull();
+      expect(JSON.parse(localStorage.getItem("ttc-quiz:progress:name-to-number")!).round).toBe(1);
+    });
+  });
+
   it("saves progress and shows it on the start screen", async () => {
     await mount();
     expect($(".mastery")).toBeNull();

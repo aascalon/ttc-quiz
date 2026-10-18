@@ -1,5 +1,6 @@
 // Per-route learning progress, kept in the browser. Each answer updates a route's
 // streaks; levels and question weights are derived from those.
+import type { Direction } from "./types";
 
 export type Level = "new" | "learning" | "known" | "instant";
 
@@ -13,6 +14,12 @@ export const LEVEL_LABELS: Record<Level, string> = {
 
 /** An answer this fast (and correct) counts towards "instant" recognition. */
 export const FAST_MS = 2000;
+/** Typing the number takes longer than tapping a choice. */
+export const TYPED_FAST_MS = 3000;
+
+export function fastMsFor(direction: Direction): number {
+  return direction === "name-to-number" ? TYPED_FAST_MS : FAST_MS;
+}
 const KNOWN_STREAK = 2;
 const INSTANT_STREAK = 3;
 
@@ -21,7 +28,7 @@ export interface RouteStats {
   correct: number;
   /** Consecutive correct answers. */
   streak: number;
-  /** Consecutive correct answers under FAST_MS. */
+  /** Consecutive correct answers under the fast threshold. */
   fastStreak: number;
   /** Round number of the most recent answer. */
   lastRound: number;
@@ -47,9 +54,9 @@ export function levelOf(stats: RouteStats | undefined): Level {
 }
 
 /** Record an answer, returning the updated stats. */
-export function recordAnswer(progress: Progress, number: string, correct: boolean, ms: number): RouteStats {
+export function recordAnswer(progress: Progress, number: string, correct: boolean, ms: number, fastMs = FAST_MS): RouteStats {
   const prev = progress.routes[number] ?? { seen: 0, correct: 0, streak: 0, fastStreak: 0, lastRound: 0, lastMs: 0 };
-  const fast = correct && ms < FAST_MS;
+  const fast = correct && ms < fastMs;
   const next: RouteStats = {
     seen: prev.seen + 1,
     correct: prev.correct + (correct ? 1 : 0),
@@ -108,11 +115,15 @@ export function countLevels(progress: Progress, numbers: Iterable<string>): Reco
   return counts;
 }
 
-const STORAGE_KEY = "ttc-quiz:progress";
+// Each direction keeps its own progress: recognising a number isn't the same as recalling it.
+const STORAGE_KEYS: Record<Direction, string> = {
+  "number-to-name": "ttc-quiz:progress",
+  "name-to-number": "ttc-quiz:progress:name-to-number",
+};
 
-export function loadProgress(): Progress {
+export function loadProgress(direction: Direction = "number-to-name"): Progress {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS[direction]) ?? "null");
     if (saved?.v === 1 && typeof saved.round === "number" && saved.routes) return saved;
   } catch {
     // Storage unavailable or corrupt; start fresh.
@@ -120,9 +131,9 @@ export function loadProgress(): Progress {
   return emptyProgress();
 }
 
-export function saveProgress(progress: Progress): void {
+export function saveProgress(progress: Progress, direction: Direction = "number-to-name"): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    localStorage.setItem(STORAGE_KEYS[direction], JSON.stringify(progress));
   } catch {
     // Progress just won't persist this session.
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import routesData from "./data/routes.json";
-import { FAST_MS, WEIGHTS, countLevels, emptyProgress, levelOf, recordAnswer, restRounds, weightOf } from "./progress";
+import { FAST_MS, TYPED_FAST_MS, WEIGHTS, countLevels, emptyProgress, levelOf, recordAnswer, restRounds, weightOf } from "./progress";
 import { buildQuiz, weightedSample } from "./quiz";
 import type { Route } from "./types";
 
@@ -27,6 +27,15 @@ describe("levels", () => {
     for (let i = 0; i < 3; i++) recordAnswer(p, "29", true, 1000);
     recordAnswer(p, "29", true, FAST_MS + 1);
     expect(levelOf(p.routes["29"])).toBe("known");
+  });
+
+  it("uses the given fast threshold, e.g. the longer one for typed answers", () => {
+    const p = emptyProgress();
+    const between = (FAST_MS + TYPED_FAST_MS) / 2;
+    recordAnswer(p, "tap", true, between);
+    recordAnswer(p, "type", true, between, TYPED_FAST_MS);
+    expect(p.routes["tap"].fastStreak).toBe(0);
+    expect(p.routes["type"].fastStreak).toBe(1);
   });
 
   it("counts levels across a pool", () => {
