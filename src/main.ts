@@ -1,7 +1,7 @@
 import "./style.css";
 import routesData from "./data/routes.json";
 import type { Polygon } from "./geo";
-import type { AreaPicker, MissedMap } from "./map";
+import type { AreaPicker, MissedMap, ShapeMap } from "./map";
 import {
   LEVELS,
   LEVEL_LABELS,
@@ -33,6 +33,23 @@ let pickerLoading = false;
 // The results map is rebuilt for each results screen.
 let missedMap: MissedMap | null = null;
 let focusedRoute: string | null = null;
+
+// The map module (Leaflet and the route lines) loads on demand, and before a shape quiz starts.
+type Maps = typeof import("./map");
+let maps: Maps | null = null;
+let mapsLoading: Promise<Maps> | null = null;
+function loadMaps(): Promise<Maps> {
+  mapsLoading ??= import("./map").then(
+    (m) => (maps = m),
+    (err) => {
+      mapsLoading = null; // Let a later attempt retry.
+      throw err;
+    },
+  );
+  return mapsLoading;
+}
+// One shape quiz map, reused for every question.
+let shapeMap: ShapeMap | null = null;
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
@@ -81,7 +98,7 @@ const QUIZZES: Record<QuizKind, { title: string; lede: string; label: string; fl
   },
 };
 /** Quizzes that can be played so far. */
-const AVAILABLE = new Set<QuizKind>(["number-to-name", "name-to-number"]);
+const AVAILABLE = new Set<QuizKind>(["number-to-name", "name-to-number", "shape-to-name"]);
 
 // The chosen quiz, and which way round each family was last played (so picking a row
 // brings back the direction you left it in).
@@ -201,6 +218,19 @@ function learningRoutes(): Route[] {
 }
 
 function start(mode: Mode, requested: number): void {
+  const m = maps;
+  if (familyOf(quiz) === "shape" && !m) {
+    // Rare: the map module is normally loaded while on the start screen.
+    const actions = document.querySelector<HTMLElement>("#start-actions");
+    if (actions) actions.innerHTML = `<p class="hint">Loading map…</p>`;
+    loadMaps().then(
+      () => start(mode, requested),
+      () => {
+        if (actions) actions.innerHTML = `<p class="hint">Couldn't load the map. Check your connection and try again.</p>`;
+      },
+    );
+    return;
+  }
   // Learn mode drills Learning routes, ignoring rest times; weights still put misses first.
   const ask = mode === "learn" ? learningRoutes() : activeRoutes();
   const length = Math.min(requested, ask.length);
@@ -210,6 +240,15 @@ function start(mode: Mode, requested: number): void {
     ask,
     weight: (r) => weightOf(progress, r.number),
     choices: isMultipleChoice(),
+    // From a line, the hard wrong answers are routes running nearby, and a lookalike
+    // (e.g. 29 Dufferin vs. 929 Dufferin Express) can't be told apart at all.
+    distractors:
+      quiz === "shape-to-name" && m
+        ? (r) => ({
+            prefer: m.nearbyRoutes(r.number).map((n) => routesByNumber.get(n)!),
+            exclude: new Set(m.lookalikes[r.number] ?? []),
+          })
+        : undefined,
   });
   const before = Object.fromEntries(questions.map((q) => [q.route.number, levelOf(progress.routes[q.route.number])]));
   progress.round++;
@@ -284,7 +323,7 @@ function renderQuizPicker(): string {
     const selected = familyOf(quiz) === family;
     const available = AVAILABLE.has(kind);
     const flip = QUIZZES[kind].flip;
-    const swapLabel = `Switch to ${QUIZZES[flip].label}`;
+    const swapLabel = AVAILABLE.has(flip) ? `Switch to ${QUIZZES[flip].label}` : `${QUIZZES[flip].label}: coming soon`;
     return `
       <label class="direction${selected ? " is-selected" : ""}${available ? "" : " is-disabled"}">
         <input class="quiz-radio" type="radio" name="quiz" data-action="pick" data-family="${family}"
@@ -404,8 +443,8 @@ function mountPicker(): void {
     });
 }
 
-/** Number → name: the number sign and four name options. */
-function renderChoices(question: Question, answer: Answer | undefined): { prompt: string; body: string } {
+/** The four name options. */
+function renderOptions(question: Question, answer: Answer | undefined): string {
   const options = question.options
     .map((name, i) => {
       let cls = "option";
@@ -418,9 +457,23 @@ function renderChoices(question: Question, answer: Answer | undefined): { prompt
         </button>`;
     })
     .join("");
+  return `<div class="options">${options}</div>`;
+}
+
+/** Number → name: the number sign and four name options. */
+function renderChoices(question: Question, answer: Answer | undefined): { prompt: string; body: string } {
   return {
     prompt: `${badge(question.route)}<p>What is the name of this ${question.route.mode} route?</p>`,
-    body: `<div class="options">${options}</div>`,
+    body: renderOptions(question, answer),
+  };
+}
+
+/** Shape → name: the route's line on a map (mounted after render) and four name options. */
+function renderShape(question: Question, answer: Answer | undefined): { prompt: string; body: string } {
+  return {
+    prompt: `<div id="shape-map-slot" class="map-slot shape-slot"><p class="hint">Loading map…</p></div>
+      <p>Which ${describeRoute(question.route)} route runs here?</p>`,
+    body: renderOptions(question, answer),
   };
 }
 
@@ -445,14 +498,27 @@ function renderQuestion(s: Extract<State, { screen: "question" }>): string {
   const answer = s.answers[s.index];
   const total = s.questions.length;
   const typed = quiz === "name-to-number";
-  const { prompt, body } = typed ? renderTyped(question, answer) : renderChoices(question, answer);
+  const { prompt, body } = typed
+    ? renderTyped(question, answer)
+    : quiz === "shape-to-name"
+      ? renderShape(question, answer)
+      : renderChoices(question, answer);
 
   const level = levelOf(progress.routes[question.route.number]);
-  const rightAnswer = typed ? question.route.number : question.route.name;
+  // In the shape quiz the number is news too, so it's shown alongside the name.
+  const rightAnswer = typed
+    ? escapeHtml(question.route.number)
+    : quiz === "shape-to-name"
+      ? `${badge(question.route, "sm")} ${escapeHtml(question.route.name)}`
+      : escapeHtml(question.route.name);
   const feedback = answer
     ? `<div class="feedback ${answer.correct ? "is-correct" : "is-wrong"}">
          <div>
-           <p>${answer.correct ? "Correct!" : `Not quite. It's <strong>${escapeHtml(rightAnswer)}</strong>.`}</p>
+           <p>${
+             answer.correct
+               ? `Correct!${quiz === "shape-to-name" ? ` It's ${rightAnswer}.` : ""}`
+               : `Not quite. It's <strong>${rightAnswer}</strong>.`
+           }</p>
            <p class="feedback-meta">${answer.correct ? `<span class="time${answer.ms < fastMsFor(quiz) ? " fast" : ""}">${formatSeconds(answer.ms)}</span>` : ""}${levelPill(level)}</p>
          </div>
          <button class="btn btn-primary" data-action="next" autofocus>
@@ -568,6 +634,15 @@ function mountMissedMap(numbers: string[]): void {
     });
 }
 
+/** Put the shape quiz map into the question, showing this question's route. */
+function mountShapeMap(s: Extract<State, { screen: "question" }>): void {
+  const slot = document.querySelector<HTMLElement>("#shape-map-slot");
+  if (!slot || !maps) return;
+  shapeMap ??= maps.createShapeMap();
+  slot.replaceChildren(shapeMap.element);
+  shapeMap.show(s.questions[s.index].route.number, isAnswered());
+}
+
 function focusRoute(number: string | null): void {
   focusedRoute = number;
   missedMap?.focus(number);
@@ -587,6 +662,8 @@ function render(): void {
   if (justSwapped) app.querySelector<HTMLElement>(`.swap[data-family="${justSwapped}"]`)?.focus();
   justSwapped = null;
   if (state.screen === "start" && scope === "area") mountPicker();
+  if (state.screen === "start" && familyOf(quiz) === "shape") loadMaps().catch(() => {});
+  if (state.screen === "question" && quiz === "shape-to-name") mountShapeMap(state);
   if (state.screen === "results") {
     const missed = state.answers.filter((a) => !a.correct).map((a) => a.question.route.number);
     if (missed.length) mountMissedMap(missed);

@@ -22,7 +22,7 @@ export interface DistractorOptions {
   local?: readonly Route[];
   /** Routes to use before any others, e.g. ones running near the answer. */
   prefer?: readonly Route[];
-  /** Route numbers never to use, e.g. ones whose line looks the same as the answer's. */
+  /** Route numbers whose names never to use, e.g. ones whose line looks the same as the answer's. */
   exclude?: ReadonlySet<string>;
 }
 
@@ -37,12 +37,14 @@ export function pickDistractors(answer: Route, routes: readonly Route[], options
   const sameColor = (pool: readonly Route[]) => pool.filter((r) => r.color === answer.color && r.mode === answer.mode);
   const sameMode = (pool: readonly Route[]) => pool.filter((r) => r.mode === answer.mode);
   const pools = [sameColor(prefer), sameMode(prefer), sameColor(local), sameMode(local), sameColor(routes), sameMode(routes), routes];
+  // By name: other routes may share an excluded route's name (e.g. its Blue Night version).
+  const excludedNames = new Set(routes.filter((r) => exclude.has(r.number)).map((r) => r.name));
 
   const picked = new Set<string>();
   for (const pool of pools) {
     for (const r of shuffle(pool, random)) {
       if (picked.size === count) return [...picked];
-      if (r.name !== answer.name && !exclude.has(r.number)) picked.add(r.name);
+      if (r.name !== answer.name && !excludedNames.has(r.name)) picked.add(r.name);
     }
   }
   if (picked.size < count) throw new Error(`Not enough distinct route names for ${answer.number}`);

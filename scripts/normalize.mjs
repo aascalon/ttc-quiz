@@ -51,6 +51,8 @@ export function normalizeName(longName, shortName) {
 const MODES = { 0: "streetcar", 3: "bus" };
 
 /** Convert routes.txt rows into sorted, de-duplicated quiz routes (bus + streetcar only). */
+const BLUE_NIGHT = "#0054A6";
+
 export function toQuizRoutes(rows) {
   const byNumber = new Map();
   for (const r of rows) {
@@ -61,7 +63,11 @@ export function toQuizRoutes(rows) {
     // Rapid-transit lines (e.g. "Line 5 Eglinton") are tagged as light rail; skip them.
     if (!number || !name || /^Line \d/i.test(name)) continue;
     if (byNumber.has(number)) continue;
-    byNumber.set(number, { number, name, mode, color: r.route_color ? `#${r.route_color}` : "#ED1C24" });
+    const color = r.route_color ? `#${r.route_color}` : "#ED1C24";
+    // Blue Night routes (the 300s) share names with their daytime routes, e.g. 29 and 329
+    // are both "Dufferin"; say so in the name, as Express routes already do.
+    const fullName = color.toUpperCase() === BLUE_NIGHT && !/blue night/i.test(name) ? `${name} Blue Night` : name;
+    byNumber.set(number, { number, name: fullName, mode, color });
   }
   return [...byNumber.values()].sort(
     (a, b) => parseInt(a.number, 10) - parseInt(b.number, 10) || a.number.localeCompare(b.number),

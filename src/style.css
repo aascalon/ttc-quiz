@@ -211,6 +211,13 @@ h2 { margin: 24px 0 8px; font-size: 1.1rem; }
   margin-bottom: 12px;
 }
 .map-results.leaflet-container { cursor: grab; }
+.shape-slot { margin-top: -8px; }
+.map-shape {
+  height: min(45vh, 300px);
+  text-align: left;
+}
+/* No background map in the shape quiz (street names would give answers away), just the network. */
+.map-shape.leaflet-container { cursor: grab; background: var(--bg); }
 .route-label.leaflet-tooltip {
   background: var(--route-color, #da251d);
   color: #fff;

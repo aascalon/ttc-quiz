@@ -145,8 +145,8 @@ describe("quiz UI", () => {
     const currentRoute = () => {
       const name = $(".badge-name")!.textContent!;
       const kind = $(".prompt p")!.textContent!;
-      // The name plus its description picks out exactly one route.
-      return routes.find((r) => r.name === name && kind.includes(r.mode) && (kind.includes("Blue Night") === (r.color === "#0054A6")))!;
+      // The name plus its mode picks out exactly one route (e.g. 7 Bathurst bus, 511 Bathurst streetcar).
+      return routes.find((r) => r.name === name && kind.includes(r.mode))!;
     };
 
     it("swaps direction from the start screen and remembers it", async () => {

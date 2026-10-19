@@ -58,6 +58,18 @@ describe("pickDistractors", () => {
     expect(pickDistractors(pool[0], pool).sort()).toEqual(["B", "C", "D"]);
   });
 
+  it("never offers an excluded route's name, even via another route sharing it", () => {
+    const pool: Route[] = [
+      { number: "1", name: "A", mode: "bus", color: "#000" },
+      { number: "2", name: "X", mode: "bus", color: "#000" },
+      { number: "3", name: "X", mode: "bus", color: "#000" },
+      ...["B", "C", "D", "E"].map((name, i) => ({ number: String(10 + i), name, mode: "bus" as const, color: "#000" })),
+    ];
+    for (let run = 0; run < 20; run++) {
+      expect(pickDistractors(pool[0], pool, { prefer: [pool[2]], exclude: new Set(["2"]) })).not.toContain("X");
+    }
+  });
+
   it("uses preferred routes first and never excluded ones", () => {
     const dufferin = routes.find((r) => r.number === "29")!;
     const prefer = routes.filter((r) => ["35", "41", "47", "63"].includes(r.number));
@@ -89,6 +101,15 @@ describe("data normalization", () => {
       { route_short_name: "29", route_long_name: "Dufferin", route_type: "3", route_color: "ED1C24" },
     ];
     expect(toQuizRoutes(rows).map((r: Route) => r.number)).toEqual(["29", "501"]);
+  });
+
+  it("names Blue Night routes as such, so they don't share their daytime route's name", () => {
+    const rows = [
+      { route_short_name: "29", route_long_name: "Dufferin", route_type: "3", route_color: "ED1C24" },
+      { route_short_name: "329", route_long_name: "Dufferin", route_type: "3", route_color: "0054a6" },
+    ];
+    expect(toQuizRoutes(rows).map((r: Route) => r.name)).toEqual(["Dufferin", "Dufferin Blue Night"]);
+    expect(routes.find((r) => r.number === "300")!.name).toMatch(/ Blue Night$/);
   });
 
   it("generated data has no lines and includes Blue Night routes", () => {

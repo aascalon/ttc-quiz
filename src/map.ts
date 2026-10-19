@@ -1,10 +1,13 @@
 // OpenStreetMap maps of the route network, loaded on demand. All maps are a RouteMap
 // (every route drawn faintly, some highlighted and labelled, optionally an area outline):
 // - the area picker adds drawing, highlighting the routes through the drawn area;
-// - the results map highlights the routes the player missed.
+// - the results map highlights the routes the player missed;
+// - the shape quiz map shows one route's line, with no street names to give it away.
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { routeShapes, routesInArea } from "./areas";
+
+export { lookalikes, nearbyRoutes } from "./areas";
 import routesData from "./data/routes.json";
 import { labelCandidates, type LatLon, type Polygon } from "./geo";
 import type { Route } from "./types";
@@ -16,22 +19,10 @@ const ACTIVE = { color: "#da251d", weight: 3.5, opacity: 0.95 };
 const AREA = { color: "#1f4fbf", weight: 2, fillOpacity: 0.08, interactive: false };
 const CLOSE_PX = 18;
 
-const TILES = {
-  osm: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    options: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
-  },
-  // Street names would give away most route names, so the shape quiz uses a map without any.
-  nolabels: {
-    url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
-    options: {
-      maxZoom: 19,
-      subdomains: "abcd",
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-} satisfies Record<string, { url: string; options: L.TileLayerOptions }>;
+const OSM_TILES = {
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  options: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
+};
 
 interface RouteMap {
   map: L.Map;
@@ -51,8 +42,8 @@ interface RouteMapOptions {
    * or show it overlapping (for a few labels that all matter).
    */
   crowdedLabels: "hide" | "overlap";
-  /** Background map; defaults to OpenStreetMap. */
-  tiles?: keyof typeof TILES;
+  /** OpenStreetMap underneath (default), or no background map, e.g. when street names would give answers away. */
+  tiles?: "osm" | "none";
   /** Draw every route faintly behind the highlighted ones (default true). */
   network?: boolean;
 }
@@ -60,7 +51,7 @@ interface RouteMapOptions {
 function createRouteMap(container: HTMLElement, options: RouteMapOptions): RouteMap {
   const { map: mapOptions, crowdedLabels, tiles = "osm", network = true } = options;
   const map = L.map(container, { preferCanvas: true, zoomSnap: 0.5, ...mapOptions }).setView([43.7, -79.4], 11);
-  L.tileLayer(TILES[tiles].url, TILES[tiles].options).addTo(map);
+  if (tiles === "osm") L.tileLayer(OSM_TILES.url, OSM_TILES.options).addTo(map);
 
   // Without the network, routes are only on the map while highlighted.
   const layers = new Map<string, L.Polyline>();
@@ -280,6 +271,39 @@ export function createMissedMap(numbers: string[], area: Polygon | null): Missed
     focus: routeMap.focus,
     destroy() {
       routeMap.map.remove();
+    },
+  };
+}
+
+export interface ShapeMap {
+  element: HTMLElement;
+  /** Show one route's line, zoomed to fit; `reveal` adds its number once answered. Call while on the page. */
+  show(number: string, reveal: boolean): void;
+}
+
+/**
+ * Shape quiz map: one route in red over the faint network, and no background map, since
+ * street names would give away most route names. Kept for the session and reused per question.
+ */
+export function createShapeMap(): ShapeMap {
+  const element = document.createElement("div");
+  element.className = "map map-shape";
+  // No fade, so the number appears the moment the question is answered.
+  const routeMap = createRouteMap(element, {
+    map: { scrollWheelZoom: false, fadeAnimation: false },
+    crowdedLabels: "overlap",
+    tiles: "none",
+  });
+  let current: string | null = null;
+
+  return {
+    element,
+    show(number, reveal) {
+      routeMap.map.invalidateSize({ pan: false });
+      routeMap.show([number], null, { labels: reveal });
+      if (number === current) return;
+      current = number;
+      routeMap.map.fitBounds(routeMap.highlightBounds()!, { padding: [20, 20], maxZoom: 14, animate: false });
     },
   };
 }
