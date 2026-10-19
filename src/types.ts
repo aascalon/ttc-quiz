@@ -1,3 +1,5 @@
+import type { DrawScore } from "./drawScore";
+
 export type Mode = "bus" | "streetcar";
 
 /**
@@ -26,8 +28,10 @@ export interface Question {
 }
 
 export interface Answer {
+  /** For drawn answers, how close the drawing was. */
+  drawing?: DrawScore;
   question: Question;
-  /** The option picked, or the number typed. */
+  /** The option picked, the number typed, or the drawing's score. */
   chosen: string;
   correct: boolean;
   /** Time from the question appearing to the answer, in milliseconds. */

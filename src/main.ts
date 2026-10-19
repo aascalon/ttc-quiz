@@ -1,7 +1,9 @@
 import "./style.css";
 import routesData from "./data/routes.json";
 import type { Polygon } from "./geo";
-import type { AreaPicker, MissedMap, ShapeMap } from "./map";
+import { EXCELLENT, PASS, scoreDrawing, type DrawScore } from "./drawScore";
+import type { LatLon } from "./geo";
+import type { AreaPicker, DrawMap, MissedMap, ShapeMap } from "./map";
 import {
   LEVELS,
   LEVEL_LABELS,
@@ -50,6 +52,9 @@ function loadMaps(): Promise<Maps> {
 }
 // One shape quiz map, reused for every question.
 let shapeMap: ShapeMap | null = null;
+// The drawing map, rebuilt each round (the area may have changed) and reused for its questions.
+let drawMap: DrawMap | null = null;
+let roundSerial = 0;
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
@@ -98,7 +103,7 @@ const QUIZZES: Record<QuizKind, { title: string; lede: string; label: string; fl
   },
 };
 /** Quizzes that can be played so far. */
-const AVAILABLE = new Set<QuizKind>(["number-to-name", "name-to-number", "shape-to-name"]);
+const AVAILABLE = new Set<QuizKind>(["number-to-name", "name-to-number", "shape-to-name", "name-to-shape"]);
 
 // The chosen quiz, and which way round each family was last played (so picking a row
 // brings back the direction you left it in).
@@ -251,6 +256,9 @@ function start(mode: Mode, requested: number): void {
         : undefined,
   });
   const before = Object.fromEntries(questions.map((q) => [q.route.number, levelOf(progress.routes[q.route.number])]));
+  drawMap?.destroy();
+  drawMap = null;
+  roundSerial++;
   progress.round++;
   saveProgress(progress, quiz);
   startTimer();
@@ -261,14 +269,16 @@ function isAnswered(): boolean {
   return state.screen === "question" && state.answers.length > state.index;
 }
 
-function submitAnswer(chosen: string, correct: boolean): void {
+function submitAnswer(chosen: string, correct: boolean, drawing?: DrawScore): void {
   if (state.screen !== "question" || isAnswered()) return;
   const question = state.questions[state.index];
   const fastMs = fastMsFor(quiz);
   const elapsed = performance.now() - shownAt;
   const ms = hiddenDuringQuestion ? Math.max(elapsed, fastMs) : elapsed;
-  state.answers.push({ question, chosen, correct, ms });
-  recordAnswer(progress, question.route.number, correct, ms, ms < fastMs);
+  state.answers.push({ question, chosen, correct, ms, drawing });
+  // Drawing isn't timed: an excellent score is what counts towards Instant.
+  const fast = drawing ? drawing.score >= EXCELLENT : ms < fastMs;
+  recordAnswer(progress, question.route.number, correct, ms, fast);
   saveProgress(progress, quiz);
   render();
 }
@@ -286,6 +296,14 @@ function submitTyped(value: string): void {
   if (state.screen !== "question") return;
   const typed = value.trim();
   if (typed) submitAnswer(typed, typed === state.questions[state.index].route.number);
+}
+
+/** Name → line: score the drawing against the route's lines. */
+function submitDrawing(points: LatLon[]): void {
+  if (state.screen !== "question" || !maps) return;
+  const route = state.questions[state.index].route;
+  const drawing = scoreDrawing(points, maps.routeShapes[route.number] ?? []);
+  submitAnswer(String(drawing.score), drawing.score >= PASS, drawing);
 }
 
 function next(): void {
@@ -404,7 +422,11 @@ function renderProgressPanel(pool: Route[]): string {
       </div>
       <div class="mastery-bar" role="img" aria-label="${LEVELS.map((l) => `${counts[l]} ${LEVEL_LABELS[l]}`).join(", ")}">${segments}</div>
       <ul class="mastery-legend">${legend}</ul>
-      <p class="hint">Instant means right 3 times in a row, each in under ${fastMsFor(quiz) / 1000} seconds. Missed routes come back soon; ones you know rest for a while.</p>
+      <p class="hint">${
+        quiz === "name-to-shape"
+          ? `Drawings scoring ${PASS} or more count as right. Instant means scoring ${EXCELLENT} or more 3 times in a row.`
+          : `Instant means right 3 times in a row, each in under ${fastMsFor(quiz) / 1000} seconds.`
+      } Missed routes come back soon; ones you know rest for a while.</p>
     </div>`;
 }
 
@@ -468,6 +490,18 @@ function renderChoices(question: Question, answer: Answer | undefined): { prompt
   };
 }
 
+/** Name → line: the name on its sign, and a map to draw on (mounted after render). */
+function renderDraw(question: Question): { prompt: string; body: string } {
+  const { route } = question;
+  return {
+    prompt: `<span class="badge badge-name" style="--route-color:${route.color}">${escapeHtml(route.name)}</span>
+      <p>Draw where this ${describeRoute(route)} route runs.</p>`,
+    body: `<div id="draw-map-slot" class="map-slot draw-slot"><p class="hint">Loading map…</p></div>`,
+  };
+}
+
+const percent = (share: number) => `${Math.round(share * 100)}%`;
+
 /** Shape → name: the route's line on a map (mounted after render) and four name options. */
 function renderShape(question: Question, answer: Answer | undefined): { prompt: string; body: string } {
   return {
@@ -493,6 +527,13 @@ function renderTyped(question: Question, answer: Answer | undefined): { prompt: 
   };
 }
 
+function drawingFeedback(d: DrawScore, route: Route): string {
+  const verdict = d.score >= EXCELLENT ? "Spot on!" : d.score >= PASS ? "Close enough." : `Not quite: ${PASS} passes.`;
+  return `
+    <p><span class="draw-score${d.score >= EXCELLENT ? " excellent" : ""}">${d.score}</span> ${verdict}</p>
+    <p class="feedback-detail">${badge(route, "sm")} You covered ${percent(d.coverage)} of the route, and ${percent(d.accuracy)} of your line was on it.</p>`;
+}
+
 function renderQuestion(s: Extract<State, { screen: "question" }>): string {
   const question = s.questions[s.index];
   const answer = s.answers[s.index];
@@ -502,24 +543,30 @@ function renderQuestion(s: Extract<State, { screen: "question" }>): string {
     ? renderTyped(question, answer)
     : quiz === "shape-to-name"
       ? renderShape(question, answer)
-      : renderChoices(question, answer);
+      : quiz === "name-to-shape"
+        ? renderDraw(question)
+        : renderChoices(question, answer);
 
   const level = levelOf(progress.routes[question.route.number]);
-  // In the shape quiz the number is news too, so it's shown alongside the name.
+  // In the line quizzes the number is news too, so it's shown alongside the name.
   const rightAnswer = typed
     ? escapeHtml(question.route.number)
-    : quiz === "shape-to-name"
+    : familyOf(quiz) === "shape"
       ? `${badge(question.route, "sm")} ${escapeHtml(question.route.name)}`
       : escapeHtml(question.route.name);
   const feedback = answer
     ? `<div class="feedback ${answer.correct ? "is-correct" : "is-wrong"}">
          <div>
-           <p>${
-             answer.correct
-               ? `Correct!${quiz === "shape-to-name" ? ` It's ${rightAnswer}.` : ""}`
-               : `Not quite. It's <strong>${rightAnswer}</strong>.`
-           }</p>
-           <p class="feedback-meta">${answer.correct ? `<span class="time${answer.ms < fastMsFor(quiz) ? " fast" : ""}">${formatSeconds(answer.ms)}</span>` : ""}${levelPill(level)}</p>
+           ${
+             answer.drawing
+               ? drawingFeedback(answer.drawing, question.route)
+               : `<p>${
+                   answer.correct
+                     ? `Correct!${quiz === "shape-to-name" ? ` It's ${rightAnswer}.` : ""}`
+                     : `Not quite. It's <strong>${rightAnswer}</strong>.`
+                 }</p>`
+           }
+           <p class="feedback-meta">${answer.correct && !answer.drawing ? `<span class="time${answer.ms < fastMsFor(quiz) ? " fast" : ""}">${formatSeconds(answer.ms)}</span>` : ""}${levelPill(level)}</p>
          </div>
          <button class="btn btn-primary" data-action="next" autofocus>
            ${s.index + 1 < total ? "Next" : "See results"}
@@ -548,6 +595,12 @@ function renderResults(s: Extract<State, { screen: "results" }>): string {
     pct === 1 ? "Perfect run. You know your routes!" : pct >= 0.7 ? "Nice work." : pct >= 0.4 ? "Not bad. Keep riding." : "Time for a few more trips.";
   const correctTimes = s.answers.filter((a) => a.correct).map((a) => a.ms);
   const avg = correctTimes.length ? correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length : 0;
+  const drawScores = s.answers.flatMap((a) => (a.drawing ? [a.drawing.score] : []));
+  const average = drawScores.length
+    ? `Average drawing score: ${Math.round(drawScores.reduce((a, b) => a + b, 0) / drawScores.length)}`
+    : avg
+      ? `Average time on correct answers: ${formatSeconds(avg)}`
+      : "";
   // Reaching Known or Instant is worth celebrating; New → Learning is just "seen it".
   const movedUp = s.answers.filter((a) => {
     const after = levelOf(progress.routes[a.question.route.number]);
@@ -558,7 +611,7 @@ function renderResults(s: Extract<State, { screen: "results" }>): string {
     <section class="card">
       <h1>${correct} / ${s.answers.length}</h1>
       <p class="lede">${verdict}</p>
-      ${avg ? `<p class="hint">Average time on correct answers: ${formatSeconds(avg)}</p>` : ""}
+      ${average ? `<p class="hint">${average}</p>` : ""}
       ${
         movedUp.length
           ? `<h2>Levelled up</h2>
@@ -594,6 +647,7 @@ function renderResults(s: Extract<State, { screen: "results" }>): string {
 
 /** "You picked Queen", or for typed answers "You typed 501 (Queen)". */
 function describeMistake(a: Answer): string {
+  if (a.drawing) return `Scored ${a.drawing.score}`;
   if (isMultipleChoice()) return `You picked ${escapeHtml(a.chosen)}`;
   const typedRoute = routesByNumber.get(a.chosen);
   const which = typedRoute ? `${escapeHtml(typedRoute.name)}${typedRoute.name === a.question.route.name ? `, the ${describeRoute(typedRoute)}` : ""}` : "no such route";
@@ -643,6 +697,16 @@ function mountShapeMap(s: Extract<State, { screen: "question" }>): void {
   shapeMap.show(s.questions[s.index].route.number, isAnswered());
 }
 
+/** Put the drawing map into the question: a fresh drawing, or the result once answered. */
+function mountDrawMap(s: Extract<State, { screen: "question" }>): void {
+  const slot = document.querySelector<HTMLElement>("#draw-map-slot");
+  if (!slot || !maps) return;
+  drawMap ??= maps.createDrawMap(scope === "area" ? area : null, submitDrawing);
+  slot.replaceChildren(drawMap.element);
+  drawMap.start(`${roundSerial}:${s.index}`);
+  if (isAnswered()) drawMap.reveal(s.questions[s.index].route.number);
+}
+
 function focusRoute(number: string | null): void {
   focusedRoute = number;
   missedMap?.focus(number);
@@ -669,6 +733,7 @@ function render(): void {
   // Put the map back before focusing: focusing scrolls to the element, so the page has to
   // be its final height by then or the scroll position ends up off.
   if (state.screen === "question" && quiz === "shape-to-name") mountShapeMap(state);
+  if (state.screen === "question" && quiz === "name-to-shape") mountDrawMap(state);
   focusGently(app.querySelector<HTMLElement>("[autofocus]"));
   // Re-rendering after a swap would otherwise drop keyboard focus from the swap button.
   if (justSwapped) app.querySelector<HTMLElement>(`.swap[data-family="${justSwapped}"]`)?.focus();

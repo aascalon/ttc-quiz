@@ -7,6 +7,7 @@ import type { Route } from "./types";
 
 const routes = routesData as Route[];
 const shown: { number: string; reveal: boolean }[] = [];
+const draw = { onDone: (_: [number, number][]) => {}, starts: [] as string[], revealed: [] as string[], made: 0 };
 
 vi.mock("./map", async () => ({
   ...(await import("./areas")),
@@ -14,6 +15,16 @@ vi.mock("./map", async () => ({
     element: Object.assign(document.createElement("div"), { className: "stub-shape-map" }),
     show: (number: string, reveal: boolean) => shown.push({ number, reveal }),
   }),
+  createDrawMap: (_area: unknown, onDone: (points: [number, number][]) => void) => {
+    draw.onDone = onDone;
+    draw.made++;
+    return {
+      element: Object.assign(document.createElement("div"), { className: "stub-draw-map" }),
+      start: (key: string) => draw.starts.push(key),
+      reveal: (number: string) => draw.revealed.push(number),
+      destroy() {},
+    };
+  },
   createMissedMap: () => ({ element: document.createElement("div"), refresh() {}, focus() {}, destroy() {} }),
 }));
 
@@ -33,6 +44,48 @@ async function pickShapeQuiz() {
   $('.quiz-radio[data-family="shape"]')!.click();
   await vi.dynamicImportSettled();
 }
+
+describe("name → line quiz", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    Object.assign(draw, { starts: [], revealed: [], made: 0 });
+  });
+
+  const currentRoute = () => {
+    const name = $(".badge-name")!.textContent!;
+    const kind = $(".prompt p")!.textContent!;
+    return routes.find((r) => r.name === name && kind.includes(r.mode))!;
+  };
+
+  it("scores drawings: tracing the route passes, a line elsewhere doesn't", async () => {
+    const { routeShapes } = await import("./areas");
+    await mount();
+    await pickShapeQuiz();
+    $('.swap[data-family="shape"]')!.click();
+    expect($("h1")!.textContent).toBe("Draw that route");
+    $('[data-length="5"]')!.click();
+    for (let i = 0; i < 5; i++) {
+      const route = currentRoute();
+      expect($(".stub-draw-map")).not.toBeNull();
+      expect(draw.starts.at(-1)).toMatch(new RegExp(`:${i}$`));
+      // Trace the first two exactly; draw the rest out in Lake Ontario.
+      draw.onDone(i < 2 ? routeShapes[route.number][0] : [[43.5, -79.5], [43.5, -79.3]]);
+      expect(draw.revealed.at(-1)).toBe(route.number);
+      expect($(".feedback")!.classList.contains(i < 2 ? "is-correct" : "is-wrong")).toBe(true);
+      expect($(".draw-score")!.textContent).toBe(i < 2 ? "100" : "0");
+      expect($(".feedback .badge")!.textContent).toBe(route.number);
+      key("Enter");
+    }
+    expect($("h1")!.textContent).toBe("2 / 5");
+    expect($$(".review-missed li").map((li) => li.textContent)).toEqual(Array(3).fill(expect.stringContaining("Scored 0")));
+    expect(document.body.textContent).toContain("Average drawing score: 40");
+    // Two perfect drawings count towards Instant, like fast answers.
+    const saved = JSON.parse(localStorage.getItem("ttc-quiz:progress:name-to-shape")!);
+    expect(Object.values(saved.routes).filter((r: any) => r.fastStreak === 1)).toHaveLength(2);
+    // One map per round.
+    expect(draw.made).toBe(1);
+  });
+});
 
 describe("shape → name quiz", () => {
   beforeEach(() => {

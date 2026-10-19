@@ -2,12 +2,13 @@
 // (every route drawn faintly, some highlighted and labelled, optionally an area outline):
 // - the area picker adds drawing, highlighting the routes through the drawn area;
 // - the results map highlights the routes the player missed;
-// - the shape quiz map shows one route's line, with no street names to give it away.
+// - the shape quiz map shows one route's line, with no street names to give it away;
+// - the drawing map has no routes until you've drawn one, then shows the real one.
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { routeShapes, routesInArea } from "./areas";
 
-export { lookalikes, nearbyRoutes } from "./areas";
+export { lookalikes, nearbyRoutes, routeShapes } from "./areas";
 import routesData from "./data/routes.json";
 import { labelCandidates, type LatLon, type Polygon } from "./geo";
 import type { Route } from "./types";
@@ -304,6 +305,123 @@ export function createShapeMap(): ShapeMap {
       if (number === current) return;
       current = number;
       routeMap.map.fitBounds(routeMap.highlightBounds()!, { padding: [20, 20], maxZoom: 14, animate: false });
+    },
+  };
+}
+
+const DRAWN = { color: "#1f6fd1", weight: 4, opacity: 0.9 };
+const REAL = { color: "#1a9d49", weight: 5, opacity: 0.85 };
+
+export interface DrawMap {
+  element: HTMLElement;
+  /** Start a fresh drawing (if `key` is a new question), in view of the city or the area. Call while on the page. */
+  start(key: string): void;
+  /** After Done: show the real route under the drawing, and fit both in view. */
+  reveal(number: string): void;
+  destroy(): void;
+}
+
+/**
+ * Drawing quiz map: OpenStreetMap (you need the street names) without the route network
+ * (you'd just trace it). Tap to add points to a line; Done hands the line to `onDone`.
+ */
+export function createDrawMap(area: Polygon | null, onDone: (points: LatLon[]) => void): DrawMap {
+  const element = document.createElement("div");
+  element.className = "area-picker draw-map";
+  element.innerHTML = `
+    <div class="map"></div>
+    <div class="map-toolbar">
+      <p class="map-hint"></p>
+      <div class="map-buttons">
+        <button type="button" class="btn" data-map="undo">Undo</button>
+        <button type="button" class="btn" data-map="clear">Clear</button>
+        <button type="button" class="btn btn-primary" data-map="done">Done</button>
+      </div>
+    </div>`;
+  const hint = element.querySelector<HTMLElement>(".map-hint")!;
+  const toolbar = element.querySelector<HTMLElement>(".map-buttons")!;
+  const button = (name: string) => element.querySelector<HTMLButtonElement>(`[data-map="${name}"]`)!;
+
+  const routeMap = createRouteMap(element.querySelector<HTMLElement>(".map")!, {
+    map: { doubleClickZoom: false },
+    crowdedLabels: "overlap",
+    network: false,
+  });
+  const { map } = routeMap;
+  routeMap.show([], area);
+  const startBounds = area ? L.latLngBounds(area) : routeMap.networkBounds;
+
+  const real = L.polyline([], { ...REAL, interactive: false }).addTo(map);
+  const line = L.polyline([], { ...DRAWN, interactive: false }).addTo(map);
+  const vertices = L.layerGroup().addTo(map);
+  let points: LatLon[] = [];
+  let finished = false;
+  let key: string | null = null;
+
+  function update(): void {
+    line.setLatLngs(points);
+    vertices.clearLayers();
+    if (!finished) {
+      for (const p of points) {
+        L.circleMarker(p, { radius: 4, color: DRAWN.color, fillColor: "#fff", fillOpacity: 1, weight: 2, interactive: false }).addTo(vertices);
+      }
+    }
+    // (Not `hidden`: the toolbar's display: flex would override it.)
+    toolbar.style.display = finished ? "none" : "";
+    button("undo").disabled = button("clear").disabled = points.length === 0;
+    button("done").disabled = points.length < 2;
+    hint.textContent = finished
+      ? "Green is the real route; blue is yours."
+      : points.length === 0
+        ? "Tap along the route to draw it, from one end to the other. Zoom in to be precise."
+        : points.length < 2
+          ? "Keep tapping along the route."
+          : "Keep going, or press Done when you've drawn it all.";
+  }
+
+  map.on("click", (e: L.LeafletMouseEvent) => {
+    if (finished) return;
+    points.push([e.latlng.lat, e.latlng.lng]);
+    update();
+  });
+  button("undo").addEventListener("click", () => {
+    points.pop();
+    update();
+  });
+  button("clear").addEventListener("click", () => {
+    points = [];
+    update();
+  });
+  button("done").addEventListener("click", () => {
+    if (points.length < 2) return;
+    finished = true;
+    update();
+    onDone([...points]);
+  });
+
+  return {
+    element,
+    start(next) {
+      map.invalidateSize({ pan: false });
+      if (next === key) return;
+      key = next;
+      points = [];
+      finished = false;
+      real.setLatLngs([]);
+      update();
+      map.fitBounds(startBounds, { padding: [16, 16], maxZoom: 15, animate: false });
+    },
+    reveal(number) {
+      finished = true;
+      real.setLatLngs(routeShapes[number] ?? []);
+      line.bringToFront();
+      update();
+      const bounds = real.getBounds();
+      if (points.length) bounds.extend(L.latLngBounds(points));
+      if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: false });
+    },
+    destroy() {
+      map.remove();
     },
   };
 }

@@ -7,10 +7,11 @@ Quizzes about the Toronto Transit Commission's bus and streetcar routes, in roun
 - **Number → name:** see a route number, pick its name from four options.
 - **Name → number:** see a route's name on its sign, type its number.
 - **Line → name:** see a route's line on a map (no street names, just the rest of the network), pick its name from four. Wrong options run nearby, and never trace the same line (e.g. 29 Dufferin and 929 Dufferin Express).
+- **Name → line:** see a route's name, draw it on the map by tapping along it. Scored 0–100 on how much of the route you covered and how much of your line was on it (full credit within 50 m, none past 200 m); 70 passes and 90+ counts towards Instant. Tunable in `src/drawScore.ts`.
 
 You can quiz on the whole city, or draw an area on an OpenStreetMap map to only get routes that pass through it.
 
-Progress is tracked per route and per quiz in the browser (New → Learning → Known → Instant, where Instant means three correct answers in a row, each under 2 seconds, or 3 when typing or recognising a line). Rounds use simple spaced repetition: missed routes come back soon, and routes you know rest for longer. **Learn mode** drills just the routes in the Learning stage.
+Progress is tracked per route and per quiz in the browser (New → Learning → Known → Instant, where Instant means three correct answers in a row, each under 2 seconds, or 3 when typing or recognising a line; for drawing, scoring 90+). Rounds use simple spaced repetition: missed routes come back soon, and routes you know rest for longer. **Learn mode** drills just the routes in the Learning stage.
 
 Pushing to `main` runs the tests and deploys to GitHub Pages (`.github/workflows/deploy.yml`).
 
