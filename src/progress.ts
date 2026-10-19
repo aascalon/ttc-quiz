@@ -1,6 +1,6 @@
 // Per-route learning progress, kept in the browser. Each answer updates a route's
 // streaks; levels and question weights are derived from those.
-import type { Direction } from "./types";
+import type { QuizKind } from "./types";
 
 export type Level = "new" | "learning" | "known" | "instant";
 
@@ -14,11 +14,12 @@ export const LEVEL_LABELS: Record<Level, string> = {
 
 /** An answer this fast (and correct) counts towards "instant" recognition. */
 export const FAST_MS = 2000;
-/** Typing the number takes longer than tapping a choice. */
-export const TYPED_FAST_MS = 3000;
+/** Typing the number, or recognising a line's shape, takes longer than reading a number. */
+export const SLOW_FAST_MS = 3000;
 
-export function fastMsFor(direction: Direction): number {
-  return direction === "name-to-number" ? TYPED_FAST_MS : FAST_MS;
+/** The "fast" time limit for timed quizzes. Drawing isn't timed; a high score counts as fast instead. */
+export function fastMsFor(kind: QuizKind): number {
+  return kind === "number-to-name" ? FAST_MS : SLOW_FAST_MS;
 }
 const KNOWN_STREAK = 2;
 const INSTANT_STREAK = 3;
@@ -53,10 +54,13 @@ export function levelOf(stats: RouteStats | undefined): Level {
   return "learning";
 }
 
-/** Record an answer, returning the updated stats. */
-export function recordAnswer(progress: Progress, number: string, correct: boolean, ms: number, fastMs = FAST_MS): RouteStats {
+/**
+ * Record an answer, returning the updated stats. `fast` says whether it was convincing enough
+ * to count towards Instant (only counted when correct); by default, under FAST_MS.
+ */
+export function recordAnswer(progress: Progress, number: string, correct: boolean, ms: number, fast = ms < FAST_MS): RouteStats {
   const prev = progress.routes[number] ?? { seen: 0, correct: 0, streak: 0, fastStreak: 0, lastRound: 0, lastMs: 0 };
-  const fast = correct && ms < fastMs;
+  fast &&= correct;
   const next: RouteStats = {
     seen: prev.seen + 1,
     correct: prev.correct + (correct ? 1 : 0),
@@ -115,15 +119,18 @@ export function countLevels(progress: Progress, numbers: Iterable<string>): Reco
   return counts;
 }
 
-// Each direction keeps its own progress: recognising a number isn't the same as recalling it.
-const STORAGE_KEYS: Record<Direction, string> = {
+// Each quiz keeps its own progress: recognising a number isn't the same as recalling it.
+// (The number → name key predates the other quizzes, hence no suffix.)
+const STORAGE_KEYS: Record<QuizKind, string> = {
   "number-to-name": "ttc-quiz:progress",
   "name-to-number": "ttc-quiz:progress:name-to-number",
+  "shape-to-name": "ttc-quiz:progress:shape-to-name",
+  "name-to-shape": "ttc-quiz:progress:name-to-shape",
 };
 
-export function loadProgress(direction: Direction = "number-to-name"): Progress {
+export function loadProgress(kind: QuizKind = "number-to-name"): Progress {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS[direction]) ?? "null");
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS[kind]) ?? "null");
     if (saved?.v === 1 && typeof saved.round === "number" && saved.routes) return saved;
   } catch {
     // Storage unavailable or corrupt; start fresh.
@@ -131,9 +138,9 @@ export function loadProgress(direction: Direction = "number-to-name"): Progress 
   return emptyProgress();
 }
 
-export function saveProgress(progress: Progress, direction: Direction = "number-to-name"): void {
+export function saveProgress(progress: Progress, kind: QuizKind = "number-to-name"): void {
   try {
-    localStorage.setItem(STORAGE_KEYS[direction], JSON.stringify(progress));
+    localStorage.setItem(STORAGE_KEYS[kind], JSON.stringify(progress));
   } catch {
     // Progress just won't persist this session.
   }

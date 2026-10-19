@@ -1,4 +1,4 @@
-// OpenStreetMap maps of the route network, loaded on demand. Both maps are a RouteMap
+// OpenStreetMap maps of the route network, loaded on demand. All maps are a RouteMap
 // (every route drawn faintly, some highlighted and labelled, optionally an area outline):
 // - the area picker adds drawing, highlighting the routes through the drawn area;
 // - the results map highlights the routes the player missed.
@@ -16,11 +16,28 @@ const ACTIVE = { color: "#da251d", weight: 3.5, opacity: 0.95 };
 const AREA = { color: "#1f4fbf", weight: 2, fillOpacity: 0.08, interactive: false };
 const CLOSE_PX = 18;
 
+const TILES = {
+  osm: {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
+  },
+  // Street names would give away most route names, so the shape quiz uses a map without any.
+  nolabels: {
+    url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+    options: {
+      maxZoom: 19,
+      subdomains: "abcd",
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+  },
+} satisfies Record<string, { url: string; options: L.TileLayerOptions }>;
+
 interface RouteMap {
   map: L.Map;
   networkBounds: L.LatLngBounds;
   /** Highlight and label these routes, outlining `area` if given (labels sit inside it). */
-  show(numbers: Iterable<string>, area: Polygon | null): void;
+  show(numbers: Iterable<string>, area: Polygon | null, options?: { labels?: boolean }): void;
   /** Emphasise one highlighted route and fade the others, or reset with null. */
   focus(number: string | null): void;
   /** Bounds of the highlighted routes, if any. */
@@ -34,18 +51,22 @@ interface RouteMapOptions {
    * or show it overlapping (for a few labels that all matter).
    */
   crowdedLabels: "hide" | "overlap";
+  /** Background map; defaults to OpenStreetMap. */
+  tiles?: keyof typeof TILES;
+  /** Draw every route faintly behind the highlighted ones (default true). */
+  network?: boolean;
 }
 
-function createRouteMap(container: HTMLElement, { map: mapOptions, crowdedLabels }: RouteMapOptions): RouteMap {
+function createRouteMap(container: HTMLElement, options: RouteMapOptions): RouteMap {
+  const { map: mapOptions, crowdedLabels, tiles = "osm", network = true } = options;
   const map = L.map(container, { preferCanvas: true, zoomSnap: 0.5, ...mapOptions }).setView([43.7, -79.4], 11);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map);
+  L.tileLayer(TILES[tiles].url, TILES[tiles].options).addTo(map);
 
+  // Without the network, routes are only on the map while highlighted.
   const layers = new Map<string, L.Polyline>();
   for (const [number, lines] of Object.entries(routeShapes)) {
-    layers.set(number, L.polyline(lines, { ...IDLE, interactive: false }).addTo(map));
+    const layer = L.polyline(lines, { ...IDLE, interactive: false });
+    layers.set(number, network ? layer.addTo(map) : layer);
   }
   const networkBounds = L.featureGroup([...layers.values()]).getBounds();
   const border = L.polygon([], AREA).addTo(map);
@@ -63,7 +84,9 @@ function createRouteMap(container: HTMLElement, { map: mapOptions, crowdedLabels
     const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
     const order = focused ? [focused, ...shown.filter((n) => n !== focused)] : shown;
     for (const n of order) {
-      const { tooltip, candidates } = labels.get(n)!;
+      const label = labels.get(n);
+      if (!label) continue;
+      const { tooltip, candidates } = label;
       const el = tooltip.getElement();
       if (!el) continue;
       const [w, h] = [el.offsetWidth + 4, el.offsetHeight + 4];
@@ -85,8 +108,11 @@ function createRouteMap(container: HTMLElement, { map: mapOptions, crowdedLabels
   return {
     map,
     networkBounds,
-    show(numbers, area) {
-      for (const n of shown) layers.get(n)!.setStyle(IDLE);
+    show(numbers, area, { labels: withLabels = true } = {}) {
+      for (const n of shown) {
+        if (network) layers.get(n)!.setStyle(IDLE);
+        else layers.get(n)!.remove();
+      }
       for (const { tooltip } of labels.values()) tooltip.remove();
       labels.clear();
       border.setLatLngs(area ?? []);
@@ -94,7 +120,8 @@ function createRouteMap(container: HTMLElement, { map: mapOptions, crowdedLabels
 
       shown = [...numbers].filter((n) => layers.has(n));
       for (const n of shown) {
-        layers.get(n)!.setStyle(ACTIVE).bringToFront();
+        layers.get(n)!.setStyle(ACTIVE).addTo(map).bringToFront();
+        if (!withLabels) continue;
         const candidates = labelCandidates(routeShapes[n], area);
         const tooltip = L.tooltip({ permanent: true, direction: "center", className: "route-label", interactive: false, opacity: 1 })
           .setLatLng(candidates[0])
@@ -111,9 +138,9 @@ function createRouteMap(container: HTMLElement, { map: mapOptions, crowdedLabels
         const on = number === null || n === number;
         layers.get(n)!.setStyle(n === number ? { ...ACTIVE, weight: 6 } : on ? ACTIVE : { ...ACTIVE, weight: 2, opacity: 0.2 });
         // Leaflet sets label opacity inline, so it has to go through setOpacity rather than CSS.
-        const { tooltip } = labels.get(n)!;
-        tooltip.setOpacity(on ? 1 : 0.3);
-        tooltip.getElement()?.classList.toggle("is-focus", n === number);
+        const tooltip = labels.get(n)?.tooltip;
+        tooltip?.setOpacity(on ? 1 : 0.3);
+        tooltip?.getElement()?.classList.toggle("is-focus", n === number);
       }
       if (focused) layers.get(focused)!.bringToFront();
       // The focused route's label gets first pick of spots, so it's never the hidden one.

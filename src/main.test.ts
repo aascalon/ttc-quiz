@@ -155,9 +155,16 @@ describe("quiz UI", () => {
       $('[data-action="swap"]')!.click();
       expect($("h1")!.textContent).toBe("Number that route");
       expect($(".direction")!.textContent).toContain("You type");
-      expect(localStorage.getItem("ttc-quiz:direction")).toBe("name-to-number");
+      expect(JSON.parse(localStorage.getItem("ttc-quiz:quiz")!).quiz).toBe("name-to-number");
       await mount();
       expect($("h1")!.textContent).toBe("Number that route");
+    });
+
+    it("keeps the direction saved before there were shape quizzes", async () => {
+      localStorage.setItem("ttc-quiz:direction", "name-to-number");
+      await mount();
+      expect($("h1")!.textContent).toBe("Number that route");
+      expect(($(".quiz-radio") as HTMLInputElement).checked).toBe(true);
     });
 
     it("plays a typed round, scoring exact numbers only", async () => {

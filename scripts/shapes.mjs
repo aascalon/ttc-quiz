@@ -53,32 +53,38 @@ function densify(line, step) {
   return out;
 }
 
+/** A set of grid cells a line passes through; points count as on it within about one cell. */
+function coverageGrid(cell) {
+  const covered = new Set();
+  const cellOf = (p) => {
+    const [x, y] = toXY(p);
+    return [Math.floor(x / cell), Math.floor(y / cell)];
+  };
+  return {
+    cover(line) {
+      for (const p of densify(line, cell / 2)) covered.add(cellOf(p).join(","));
+    },
+    has(p) {
+      const [cx, cy] = cellOf(p);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if (covered.has(`${cx + dx},${cy + dy}`)) return true;
+      return false;
+    },
+  };
+}
+
 /**
  * Merge a route's shape variants into a few lines without overlap: longest shape first,
  * then only the parts of other shapes (branches, detours) not already drawn.
  */
 export function mergeShapes(shapes, { tolerance = 15, cell = 30 } = {}) {
-  const covered = new Set();
-  const cellKey = (p) => {
-    const [x, y] = toXY(p);
-    return `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
-  };
-  const isCovered = (p) => {
-    const [x, y] = toXY(p);
-    const cx = Math.floor(x / cell);
-    const cy = Math.floor(y / cell);
-    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if (covered.has(`${cx + dx},${cy + dy}`)) return true;
-    return false;
-  };
-  const cover = (line) => densify(line, cell / 2).forEach((p) => covered.add(cellKey(p)));
-
+  const grid = coverageGrid(cell);
   const lines = [];
   const simplified = shapes.map((s) => simplify(s, tolerance)).sort((a, b) => length(b) - length(a));
   for (const line of simplified) {
     // A segment is new if any of its densified samples falls outside the covered area.
     const fresh = [];
     for (let k = 1; k < line.length; k++) {
-      fresh.push(densify([line[k - 1], line[k]], cell / 2).some((p) => !isCovered(p)));
+      fresh.push(densify([line[k - 1], line[k]], cell / 2).some((p) => !grid.has(p)));
     }
     let run = null;
     for (let k = 1; k < line.length; k++) {
@@ -91,9 +97,41 @@ export function mergeShapes(shapes, { tolerance = 15, cell = 30 } = {}) {
       }
     }
     if (run) lines.push(run);
-    cover(line);
+    grid.cover(line);
   }
   return lines;
+}
+
+/**
+ * Pairs of differently named routes whose lines look the same on a map (mostly a route and
+ * its Express): at least `most` of one runs along the other, and `much` the other way.
+ * Returns { routeNumber: [lookalike numbers] }, listing each pair both ways.
+ */
+export function findLookalikes(linesByNumber, nameOf, { cell = 100, most = 0.8, much = 0.6 } = {}) {
+  const numbers = Object.keys(linesByNumber);
+  const grids = new Map();
+  const samples = new Map();
+  for (const n of numbers) {
+    const grid = coverageGrid(cell);
+    linesByNumber[n].forEach((line) => grid.cover(line));
+    grids.set(n, grid);
+    samples.set(n, linesByNumber[n].flatMap((line) => densify(line, cell / 2)));
+  }
+  const share = (a, b) => samples.get(a).filter((p) => grids.get(b).has(p)).length / samples.get(a).length;
+
+  const out = {};
+  const add = (a, b) => (out[a] ??= []).push(b);
+  for (const a of numbers) {
+    for (const b of numbers) {
+      if (a >= b || nameOf(a) === nameOf(b)) continue;
+      const [ab, ba] = [share(a, b), share(b, a)];
+      if (Math.max(ab, ba) >= most && Math.min(ab, ba) >= much) {
+        add(a, b);
+        add(b, a);
+      }
+    }
+  }
+  return out;
 }
 
 function length(line) {
@@ -130,7 +168,7 @@ export function encodePolyline(points) {
   return out;
 }
 
-/** Build { routeNumber: [encodedPolyline, ...] } from parsed trips/shapes rows. */
+/** Build { routeNumber: [[lat, lon], ...][] } (merged lines) from parsed trips/shapes rows. */
 export function buildRouteShapes(trips, shapeRows, routeIdToNumber) {
   const shapeIdsByRoute = new Map();
   for (const t of trips) {
@@ -149,7 +187,7 @@ export function buildRouteShapes(trips, shapeRows, routeIdToNumber) {
     const shapes = [...ids]
       .map((id) => (points.get(id) ?? []).sort((a, b) => a[0] - b[0]).map(([, lat, lon]) => [lat, lon]))
       .filter((s) => s.length > 1);
-    out[number] = mergeShapes(shapes).map(encodePolyline);
+    out[number] = mergeShapes(shapes);
   }
   return out;
 }

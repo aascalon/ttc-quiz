@@ -16,7 +16,7 @@ import {
   type Level,
 } from "./progress";
 import { buildQuiz, lengthOptions, score } from "./quiz";
-import type { Answer, Direction, Question, Route } from "./types";
+import { familyOf, type Answer, type Question, type QuizFamily, type QuizKind, type Route } from "./types";
 
 const routes = routesData as Route[];
 const routesByNumber = new Map(routes.map((r) => [r.number, r]));
@@ -54,30 +54,83 @@ function activeRoutes(): Route[] {
   return scope === "city" ? routes : routes.filter((r) => areaNumbers.has(r.number));
 }
 
-const DIRECTION_KEY = "ttc-quiz:direction";
-let direction: Direction = "number-to-name";
-try {
-  if (localStorage.getItem(DIRECTION_KEY) === "name-to-number") direction = "name-to-number";
-} catch {
-  // Storage unavailable; use the default.
-}
-// Set when the direction was just swapped, so the swap button can animate once.
-let justSwapped = false;
+const QUIZZES: Record<QuizKind, { title: string; lede: string; label: string; flip: QuizKind }> = {
+  "number-to-name": {
+    title: "Name that route",
+    lede: "You'll see a TTC route number. Pick its name from four options.",
+    label: "number → name",
+    flip: "name-to-number",
+  },
+  "name-to-number": {
+    title: "Number that route",
+    lede: "You'll see a TTC route's name on its sign. Type its number.",
+    label: "name → number",
+    flip: "number-to-name",
+  },
+  "shape-to-name": {
+    title: "Name that line",
+    lede: "You'll see a TTC route's line on a map. Pick its name from four options.",
+    label: "line → name",
+    flip: "name-to-shape",
+  },
+  "name-to-shape": {
+    title: "Draw that route",
+    lede: "You'll see a TTC route's name. Draw where it runs on the map.",
+    label: "name → line",
+    flip: "shape-to-name",
+  },
+};
+/** Quizzes that can be played so far. */
+const AVAILABLE = new Set<QuizKind>(["number-to-name", "name-to-number"]);
 
-function swapDirection(): void {
-  direction = direction === "number-to-name" ? "name-to-number" : "number-to-name";
+// The chosen quiz, and which way round each family was last played (so picking a row
+// brings back the direction you left it in).
+const QUIZ_KEY = "ttc-quiz:quiz";
+const directions: Record<QuizFamily, QuizKind> = { number: "number-to-name", shape: "shape-to-name" };
+let quiz: QuizKind = "number-to-name";
+try {
+  const saved = JSON.parse(localStorage.getItem(QUIZ_KEY) ?? "null");
+  const usable = (kind: unknown, family: QuizFamily): kind is QuizKind =>
+    AVAILABLE.has(kind as QuizKind) && familyOf(kind as QuizKind) === family;
+  if (saved) {
+    if (usable(saved.number, "number")) directions.number = saved.number;
+    if (usable(saved.shape, "shape")) directions.shape = saved.shape;
+    if (AVAILABLE.has(saved.quiz)) quiz = directions[familyOf(saved.quiz)];
+  } else if (localStorage.getItem("ttc-quiz:direction") === "name-to-number") {
+    // Saved before there were shape quizzes.
+    quiz = directions.number = "name-to-number";
+  }
+} catch {
+  // Storage unavailable or corrupt; use the defaults.
+}
+// Set when a row's direction was just swapped, so its swap button can animate once.
+let justSwapped: QuizFamily | null = null;
+
+function selectQuiz(kind: QuizKind): void {
+  quiz = directions[familyOf(kind)] = kind;
   try {
-    localStorage.setItem(DIRECTION_KEY, direction);
+    localStorage.setItem(QUIZ_KEY, JSON.stringify({ quiz, ...directions }));
   } catch {
     // Not critical.
   }
-  progress = loadProgress(direction);
-  justSwapped = true;
+  progress = loadProgress(quiz);
   render();
 }
 
-/** Progress for the current direction; each direction is tracked separately. */
-let progress = loadProgress(direction);
+function swapDirection(family: QuizFamily): void {
+  const flipped = QUIZZES[directions[family]].flip;
+  if (!AVAILABLE.has(flipped)) return;
+  justSwapped = family;
+  selectQuiz(flipped);
+}
+
+/** Multiple choice (four names), as opposed to typing or drawing the answer. */
+function isMultipleChoice(): boolean {
+  return quiz === "number-to-name" || quiz === "shape-to-name";
+}
+
+/** Progress for the current quiz; each quiz is tracked separately. */
+let progress = loadProgress(quiz);
 
 // Sign colours from the GTFS feed, as words for the name → number question.
 const SERVICE_LABELS: Record<string, string> = {
@@ -156,11 +209,11 @@ function start(mode: Mode, requested: number): void {
     local: activeRoutes(),
     ask,
     weight: (r) => weightOf(progress, r.number),
-    choices: direction === "number-to-name",
+    choices: isMultipleChoice(),
   });
   const before = Object.fromEntries(questions.map((q) => [q.route.number, levelOf(progress.routes[q.route.number])]));
   progress.round++;
-  saveProgress(progress, direction);
+  saveProgress(progress, quiz);
   startTimer();
   setState({ screen: "question", mode, length: requested, questions, index: 0, answers: [], before });
 }
@@ -172,16 +225,16 @@ function isAnswered(): boolean {
 function submitAnswer(chosen: string, correct: boolean): void {
   if (state.screen !== "question" || isAnswered()) return;
   const question = state.questions[state.index];
-  const fastMs = fastMsFor(direction);
+  const fastMs = fastMsFor(quiz);
   const elapsed = performance.now() - shownAt;
   const ms = hiddenDuringQuestion ? Math.max(elapsed, fastMs) : elapsed;
   state.answers.push({ question, chosen, correct, ms });
-  recordAnswer(progress, question.route.number, correct, ms, fastMs);
-  saveProgress(progress, direction);
+  recordAnswer(progress, question.route.number, correct, ms, ms < fastMs);
+  saveProgress(progress, quiz);
   render();
 }
 
-/** Number → name: pick one of the four names. */
+/** Multiple choice: pick one of the four names. */
 function choose(optionIndex: number): void {
   if (state.screen !== "question") return;
   const question = state.questions[state.index];
@@ -208,30 +261,51 @@ function next(): void {
 
 const SWAP_ICON = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8h15m0 0-4-4m4 4-4 4M20 16H5m0 0 4-4m-4 4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-/** "You see [501] ⇄ [Queen] You pick", or the other way round. */
-function renderDirection(): string {
-  const number = `<span class="badge badge-sm" style="--route-color:#ED1C24">501</span>`;
-  const name = `<span class="name-chip">Queen</span>`;
-  const numberFirst = direction === "number-to-name";
-  const label = numberFirst ? "Switch to: see a name, type its number" : "Switch to: see a number, pick its name";
-  return `
-    <div class="direction">
-      <div class="direction-side"><span class="direction-caption">You see</span>${numberFirst ? number : name}</div>
-      <button class="swap${justSwapped ? " is-swapping" : ""}" data-action="swap" aria-label="${label}" title="${label}">${SWAP_ICON}</button>
-      <div class="direction-side"><span class="direction-caption">${numberFirst ? "You pick" : "You type"}</span>${numberFirst ? name : number}</div>
-    </div>`;
+const SAMPLE_NUMBER = `<span class="badge badge-sm" style="--route-color:#ED1C24">501</span>`;
+const SAMPLE_NAME = `<span class="name-chip">Queen</span>`;
+const SAMPLE_LINE = `<span class="line-chip" role="img" aria-label="a route's line on a map"><svg viewBox="0 0 48 20" width="48" height="20" aria-hidden="true"><path d="M3 16h12l6-10h14l10-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+
+/** What each quiz shows, how you answer, and what with. */
+const SIDES: Record<QuizKind, [shown: string, verb: string, answer: string]> = {
+  "number-to-name": [SAMPLE_NUMBER, "You pick", SAMPLE_NAME],
+  "name-to-number": [SAMPLE_NAME, "You type", SAMPLE_NUMBER],
+  "shape-to-name": [SAMPLE_LINE, "You pick", SAMPLE_NAME],
+  "name-to-shape": [SAMPLE_NAME, "You draw", SAMPLE_LINE],
+};
+
+/**
+ * One row per quiz family, e.g. "You see [501] ⇄ [Queen] You pick". Picking a row selects
+ * that quiz; ⇄ flips its direction.
+ */
+function renderQuizPicker(): string {
+  const row = (family: QuizFamily): string => {
+    const kind = directions[family];
+    const [shown, verb, answer] = SIDES[kind];
+    const selected = familyOf(quiz) === family;
+    const available = AVAILABLE.has(kind);
+    const flip = QUIZZES[kind].flip;
+    const swapLabel = `Switch to ${QUIZZES[flip].label}`;
+    return `
+      <label class="direction${selected ? " is-selected" : ""}${available ? "" : " is-disabled"}">
+        <input class="quiz-radio" type="radio" name="quiz" data-action="pick" data-family="${family}"
+          aria-label="${QUIZZES[kind].label}" ${selected ? "checked" : ""} ${available ? "" : "disabled"} />
+        <div class="direction-side"><span class="direction-caption">You see</span>${shown}</div>
+        <button type="button" class="swap${justSwapped === family ? " is-swapping" : ""}" data-action="swap" data-family="${family}"
+          aria-label="${swapLabel}" title="${swapLabel}" ${AVAILABLE.has(flip) ? "" : "disabled"}>${SWAP_ICON}</button>
+        <div class="direction-side"><span class="direction-caption">${verb}</span>${answer}</div>
+        ${available ? "" : `<span class="soon">Coming soon</span>`}
+      </label>`;
+  };
+  return `<div class="quiz-picker" role="radiogroup" aria-label="Which quiz">${row("number")}${row("shape")}</div>`;
 }
 
 function renderStart(): string {
-  const [title, lede] =
-    direction === "number-to-name"
-      ? ["Name that route", "You'll see a TTC route number. Pick its name from four options."]
-      : ["Number that route", "You'll see a TTC route's name on its sign. Type its number."];
+  const { title, lede } = QUIZZES[quiz];
   return `
     <section class="card">
       <h1>${title}</h1>
       <p class="lede">${lede}</p>
-      ${renderDirection()}
+      ${renderQuizPicker()}
       <div class="scope" role="group" aria-label="Which routes">
         <button class="scope-btn" data-action="scope" data-scope="city" aria-pressed="${scope === "city"}">Whole city</button>
         <button class="scope-btn" data-action="scope" data-scope="area" aria-pressed="${scope === "area"}">Pick an area</button>
@@ -291,7 +365,7 @@ function renderProgressPanel(pool: Route[]): string {
       </div>
       <div class="mastery-bar" role="img" aria-label="${LEVELS.map((l) => `${counts[l]} ${LEVEL_LABELS[l]}`).join(", ")}">${segments}</div>
       <ul class="mastery-legend">${legend}</ul>
-      <p class="hint">Instant means right 3 times in a row, each in under ${fastMsFor(direction) / 1000} seconds. Missed routes come back soon; ones you know rest for a while.</p>
+      <p class="hint">Instant means right 3 times in a row, each in under ${fastMsFor(quiz) / 1000} seconds. Missed routes come back soon; ones you know rest for a while.</p>
     </div>`;
 }
 
@@ -370,7 +444,7 @@ function renderQuestion(s: Extract<State, { screen: "question" }>): string {
   const question = s.questions[s.index];
   const answer = s.answers[s.index];
   const total = s.questions.length;
-  const typed = direction === "name-to-number";
+  const typed = quiz === "name-to-number";
   const { prompt, body } = typed ? renderTyped(question, answer) : renderChoices(question, answer);
 
   const level = levelOf(progress.routes[question.route.number]);
@@ -379,7 +453,7 @@ function renderQuestion(s: Extract<State, { screen: "question" }>): string {
     ? `<div class="feedback ${answer.correct ? "is-correct" : "is-wrong"}">
          <div>
            <p>${answer.correct ? "Correct!" : `Not quite. It's <strong>${escapeHtml(rightAnswer)}</strong>.`}</p>
-           <p class="feedback-meta">${answer.correct ? `<span class="time${answer.ms < fastMsFor(direction) ? " fast" : ""}">${formatSeconds(answer.ms)}</span>` : ""}${levelPill(level)}</p>
+           <p class="feedback-meta">${answer.correct ? `<span class="time${answer.ms < fastMsFor(quiz) ? " fast" : ""}">${formatSeconds(answer.ms)}</span>` : ""}${levelPill(level)}</p>
          </div>
          <button class="btn btn-primary" data-action="next" autofocus>
            ${s.index + 1 < total ? "Next" : "See results"}
@@ -454,7 +528,7 @@ function renderResults(s: Extract<State, { screen: "results" }>): string {
 
 /** "You picked Queen", or for typed answers "You typed 501 (Queen)". */
 function describeMistake(a: Answer): string {
-  if (direction === "number-to-name") return `You picked ${escapeHtml(a.chosen)}`;
+  if (isMultipleChoice()) return `You picked ${escapeHtml(a.chosen)}`;
   const typedRoute = routesByNumber.get(a.chosen);
   const which = typedRoute ? `${escapeHtml(typedRoute.name)}${typedRoute.name === a.question.route.name ? `, the ${describeRoute(typedRoute)}` : ""}` : "no such route";
   return `You typed ${escapeHtml(a.chosen)} (${which})`;
@@ -510,8 +584,8 @@ function render(): void {
     state.screen === "start" ? renderStart() : state.screen === "question" ? renderQuestion(state) : renderResults(state);
   app.querySelector<HTMLElement>("[autofocus]")?.focus();
   // Re-rendering after a swap would otherwise drop keyboard focus from the swap button.
-  if (justSwapped) app.querySelector<HTMLElement>(".swap")?.focus();
-  justSwapped = false;
+  if (justSwapped) app.querySelector<HTMLElement>(`.swap[data-family="${justSwapped}"]`)?.focus();
+  justSwapped = null;
   if (state.screen === "start" && scope === "area") mountPicker();
   if (state.screen === "results") {
     const missed = state.answers.filter((a) => !a.correct).map((a) => a.question.route.number);
@@ -551,14 +625,18 @@ app.addEventListener("click", (e) => {
     case "home":
       return setState({ screen: "start" });
     case "reset": {
-      const which = direction === "number-to-name" ? "number → name" : "name → number";
-      if (!confirm(`Reset your ${which} progress for every route? This can't be undone.`)) return;
+      if (!confirm(`Reset your ${QUIZZES[quiz].label} progress for every route? This can't be undone.`)) return;
       progress = emptyProgress();
-      saveProgress(progress, direction);
+      saveProgress(progress, quiz);
       return updateStartActions();
     }
+    case "pick": {
+      const family = el.dataset.family as QuizFamily;
+      if (familyOf(quiz) !== family) selectQuiz(directions[family]);
+      return;
+    }
     case "swap":
-      return swapDirection();
+      return swapDirection(el.dataset.family as QuizFamily);
     case "scope":
       scope = el.dataset.scope === "area" ? "area" : "city";
       saveScope();
@@ -581,7 +659,7 @@ app.addEventListener("input", (e) => {
 document.addEventListener("keydown", (e) => {
   if (state.screen !== "question" || e.metaKey || e.ctrlKey || e.altKey) return;
   // 1–4 pick an option, but in name → number they're typed into the box instead.
-  if (direction === "number-to-name" && /^[1-4]$/.test(e.key)) {
+  if (isMultipleChoice() && /^[1-4]$/.test(e.key)) {
     choose(Number(e.key) - 1);
   } else if (e.key === "Enter" && isAnswered()) {
     e.preventDefault();

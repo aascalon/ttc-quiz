@@ -1,7 +1,15 @@
 export type Mode = "bus" | "streetcar";
 
-/** Which way round the quiz goes: see a number and pick its name, or see a name and type its number. */
-export type Direction = "number-to-name" | "name-to-number";
+/**
+ * Which quiz: what you're shown → what you answer. Number and shape quizzes each come in two
+ * directions, swapped with ⇄ on the start screen.
+ */
+export type QuizKind = "number-to-name" | "name-to-number" | "shape-to-name" | "name-to-shape";
+export type QuizFamily = "number" | "shape";
+
+export function familyOf(kind: QuizKind): QuizFamily {
+  return kind === "number-to-name" || kind === "name-to-number" ? "number" : "shape";
+}
 
 export interface Route {
   number: string;

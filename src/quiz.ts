@@ -15,28 +15,34 @@ export function shuffle<T>(items: readonly T[], random: Random = Math.random): T
   return out;
 }
 
+export interface DistractorOptions {
+  count?: number;
+  random?: Random;
+  /** The player's area, used before the rest of the city. */
+  local?: readonly Route[];
+  /** Routes to use before any others, e.g. ones running near the answer. */
+  prefer?: readonly Route[];
+  /** Route numbers never to use, e.g. ones whose line looks the same as the answer's. */
+  exclude?: ReadonlySet<string>;
+}
+
 /**
- * Pick wrong-answer names for a route. Prefers `local` routes (the player's chosen area),
- * and within each pool routes in the same sign colour (regular, Blue Night, Express,
- * community) and mode, so options can't be ruled out at a glance — e.g. a red bus never
- * gets "... Express" options. Falls back to the whole city if the area is too small.
+ * Pick wrong-answer names for a route. Prefers `prefer`, then `local` routes (the player's
+ * chosen area), and within each pool routes in the same sign colour (regular, Blue Night,
+ * Express, community) and mode, so options can't be ruled out at a glance — e.g. a red bus
+ * never gets "... Express" options. Falls back to the whole city if the area is too small.
  */
-export function pickDistractors(
-  answer: Route,
-  routes: readonly Route[],
-  count = OPTION_COUNT - 1,
-  random: Random = Math.random,
-  local: readonly Route[] = routes,
-): string[] {
+export function pickDistractors(answer: Route, routes: readonly Route[], options: DistractorOptions = {}): string[] {
+  const { count = OPTION_COUNT - 1, random = Math.random, local = routes, prefer = [], exclude = new Set() } = options;
   const sameColor = (pool: readonly Route[]) => pool.filter((r) => r.color === answer.color && r.mode === answer.mode);
   const sameMode = (pool: readonly Route[]) => pool.filter((r) => r.mode === answer.mode);
-  const pools = [sameColor(local), sameMode(local), sameColor(routes), sameMode(routes), routes];
+  const pools = [sameColor(prefer), sameMode(prefer), sameColor(local), sameMode(local), sameColor(routes), sameMode(routes), routes];
 
   const picked = new Set<string>();
   for (const pool of pools) {
     for (const r of shuffle(pool, random)) {
       if (picked.size === count) return [...picked];
-      if (r.name !== answer.name) picked.add(r.name);
+      if (r.name !== answer.name && !exclude.has(r.number)) picked.add(r.name);
     }
   }
   if (picked.size < count) throw new Error(`Not enough distinct route names for ${answer.number}`);
@@ -60,8 +66,10 @@ export interface QuizOptions {
   ask?: readonly Route[];
   /** Relative chance of each route being picked; defaults to uniform. */
   weight?: (route: Route) => number;
-  /** Whether to generate multiple-choice options (not needed when the answer is typed). */
+  /** Whether to generate multiple-choice options (not needed when the answer is typed or drawn). */
   choices?: boolean;
+  /** Extra distractor rules per question, e.g. preferring routes near the answer's line. */
+  distractors?: (route: Route) => Pick<DistractorOptions, "prefer" | "exclude">;
 }
 
 /**
@@ -69,12 +77,12 @@ export interface QuizOptions {
  * Distractors come from `local` first, then the city.
  */
 export function buildQuiz(routes: readonly Route[], length: number, options: QuizOptions = {}): Question[] {
-  const { random = Math.random, local = routes, ask = local, weight = () => 1, choices = true } = options;
+  const { random = Math.random, local = routes, ask = local, weight = () => 1, choices = true, distractors } = options;
   if (length > ask.length) throw new Error(`Only ${ask.length} routes available`);
   // Sampling decides which routes; shuffle so the weakest ones aren't always first.
   return shuffle(weightedSample(ask, length, weight, random), random).map((route) => ({
     route,
-    options: choices ? shuffle([route.name, ...pickDistractors(route, routes, OPTION_COUNT - 1, random, local)], random) : [],
+    options: choices ? shuffle([route.name, ...pickDistractors(route, routes, { random, local, ...distractors?.(route) })], random) : [],
   }));
 }
 

@@ -85,15 +85,54 @@ h2 { margin: 24px 0 8px; font-size: 1.1rem; }
 .lede { margin: 0 0 4px; font-size: 1.05rem; }
 .hint, .muted { color: var(--muted); font-size: 0.9rem; }
 
+.quiz-picker {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 0;
+}
 .direction {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 8px;
-  margin: 20px 0 0;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
+  cursor: pointer;
+}
+.direction:hover { border-color: var(--muted); }
+.direction.is-selected {
+  border-color: var(--ttc-red);
+  box-shadow: inset 0 0 0 1px var(--ttc-red);
+}
+.direction:has(.quiz-radio:focus-visible) { outline: 3px solid #f5b800; outline-offset: 2px; }
+.direction.is-disabled { cursor: default; opacity: 0.55; }
+.direction.is-disabled:hover { border-color: var(--border); }
+/* The whole row is the radio button; the input itself is only there for keyboards and screen readers. */
+.quiz-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.soon {
+  position: absolute;
+  top: -0.6em;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 6px;
+  background: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.line-chip {
+  display: grid;
+  place-items: center;
+  padding: 4px 8px;
+  color: var(--ttc-red);
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 .direction-side {
   display: flex;
@@ -126,7 +165,8 @@ h2 { margin: 24px 0 8px; font-size: 1.1rem; }
   place-items: center;
   cursor: pointer;
 }
-.swap:hover { border-color: var(--ttc-red); color: var(--ttc-red); }
+.swap:hover:not(:disabled) { border-color: var(--ttc-red); color: var(--ttc-red); }
+.swap:disabled { cursor: default; }
 .swap.is-swapping svg { animation: swap-spin 0.3s ease; }
 @keyframes swap-spin { from { transform: rotate(-180deg); } }
 @media (prefers-reduced-motion: reduce) {

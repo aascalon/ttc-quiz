@@ -1,6 +1,19 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import routesData from "./data/routes.json";
-import { FAST_MS, TYPED_FAST_MS, WEIGHTS, countLevels, emptyProgress, levelOf, recordAnswer, restRounds, weightOf } from "./progress";
+import {
+  FAST_MS,
+  SLOW_FAST_MS,
+  WEIGHTS,
+  countLevels,
+  emptyProgress,
+  levelOf,
+  loadProgress,
+  recordAnswer,
+  restRounds,
+  saveProgress,
+  weightOf,
+} from "./progress";
 import { buildQuiz, weightedSample } from "./quiz";
 import type { Route } from "./types";
 
@@ -29,13 +42,27 @@ describe("levels", () => {
     expect(levelOf(p.routes["29"])).toBe("known");
   });
 
-  it("uses the given fast threshold, e.g. the longer one for typed answers", () => {
+  it("lets the caller decide what counts as fast, e.g. the longer limit for typed answers", () => {
     const p = emptyProgress();
-    const between = (FAST_MS + TYPED_FAST_MS) / 2;
+    const between = (FAST_MS + SLOW_FAST_MS) / 2;
     recordAnswer(p, "tap", true, between);
-    recordAnswer(p, "type", true, between, TYPED_FAST_MS);
+    recordAnswer(p, "type", true, between, between < SLOW_FAST_MS);
+    recordAnswer(p, "wrong", false, 100, true);
     expect(p.routes["tap"].fastStreak).toBe(0);
     expect(p.routes["type"].fastStreak).toBe(1);
+    expect(p.routes["wrong"].fastStreak).toBe(0);
+  });
+
+  it("stores each quiz's progress separately, keeping the original number → name key", () => {
+    localStorage.clear();
+    const p = emptyProgress();
+    p.round = 7;
+    saveProgress(p, "shape-to-name");
+    expect(loadProgress("shape-to-name").round).toBe(7);
+    expect(loadProgress("name-to-shape").round).toBe(0);
+    expect(loadProgress("number-to-name").round).toBe(0);
+    localStorage.setItem("ttc-quiz:progress", JSON.stringify({ ...p, round: 3 }));
+    expect(loadProgress("number-to-name").round).toBe(3);
   });
 
   it("counts levels across a pool", () => {

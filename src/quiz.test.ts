@@ -57,6 +57,16 @@ describe("pickDistractors", () => {
     ];
     expect(pickDistractors(pool[0], pool).sort()).toEqual(["B", "C", "D"]);
   });
+
+  it("uses preferred routes first and never excluded ones", () => {
+    const dufferin = routes.find((r) => r.number === "29")!;
+    const prefer = routes.filter((r) => ["35", "41", "47", "63"].includes(r.number));
+    const exclude = new Set(["929", "35"]);
+    for (let run = 0; run < 20; run++) {
+      const names = pickDistractors(dufferin, routes, { prefer, exclude });
+      expect(names.sort()).toEqual(prefer.filter((r) => !exclude.has(r.number)).map((r) => r.name).sort());
+    }
+  });
 });
 
 describe("data normalization", () => {
@@ -101,7 +111,7 @@ describe("area quizzes", () => {
     const localNames = new Set(local.map((r) => r.name));
     const queen = local.find((r) => r.number === "501")!;
     for (let run = 0; run < 50; run++) {
-      for (const name of pickDistractors(queen, routes, 3, Math.random, local)) expect(localNames.has(name)).toBe(true);
+      for (const name of pickDistractors(queen, routes, { local })) expect(localNames.has(name)).toBe(true);
     }
   });
 
