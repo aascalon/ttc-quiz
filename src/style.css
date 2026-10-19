@@ -211,9 +211,14 @@ h2 { margin: 24px 0 8px; font-size: 1.1rem; }
   margin-bottom: 12px;
 }
 .map-results.leaflet-container { cursor: grab; }
-.shape-slot { margin-top: -8px; }
+/* Same height as the map, so swapping the placeholder for the map doesn't shift the page. */
+:root { --shape-map-height: min(45vh, 300px); }
+.shape-slot {
+  margin-top: -8px;
+  min-height: var(--shape-map-height);
+}
 .map-shape {
-  height: min(45vh, 300px);
+  height: var(--shape-map-height);
   text-align: left;
 }
 /* No background map in the shape quiz (street names would give answers away), just the network. */

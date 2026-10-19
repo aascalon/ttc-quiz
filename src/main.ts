@@ -651,19 +651,30 @@ function focusRoute(number: string | null): void {
   }
 }
 
+const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+
+/** Focus an element, scrolling it into view smoothly (and only as far as needed) rather than jumping. */
+function focusGently(el: HTMLElement | null): void {
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  el.scrollIntoView?.({ block: "nearest", behavior: reducedMotion?.matches ? "auto" : "smooth" });
+}
+
 function render(): void {
   missedMap?.destroy();
   missedMap = null;
   focusedRoute = null;
   app.innerHTML =
     state.screen === "start" ? renderStart() : state.screen === "question" ? renderQuestion(state) : renderResults(state);
-  app.querySelector<HTMLElement>("[autofocus]")?.focus();
+  // Put the map back before focusing: focusing scrolls to the element, so the page has to
+  // be its final height by then or the scroll position ends up off.
+  if (state.screen === "question" && quiz === "shape-to-name") mountShapeMap(state);
+  focusGently(app.querySelector<HTMLElement>("[autofocus]"));
   // Re-rendering after a swap would otherwise drop keyboard focus from the swap button.
   if (justSwapped) app.querySelector<HTMLElement>(`.swap[data-family="${justSwapped}"]`)?.focus();
   justSwapped = null;
   if (state.screen === "start" && scope === "area") mountPicker();
   if (state.screen === "start" && familyOf(quiz) === "shape") loadMaps().catch(() => {});
-  if (state.screen === "question" && quiz === "shape-to-name") mountShapeMap(state);
   if (state.screen === "results") {
     const missed = state.answers.filter((a) => !a.correct).map((a) => a.question.route.number);
     if (missed.length) mountMissedMap(missed);
