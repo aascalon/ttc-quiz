@@ -43,8 +43,12 @@ interface RouteMapOptions {
    * or show it overlapping (for a few labels that all matter).
    */
   crowdedLabels: "hide" | "overlap";
-  /** OpenStreetMap underneath (default), or no background map, e.g. when street names would give answers away. */
-  tiles?: "osm" | "none";
+  /**
+   * The map underneath: OpenStreetMap (default); "streets", a street map without transit
+   * tracks to trace; or "plain", the same without labels, where street names would give
+   * answers away.
+   */
+  tiles?: "osm" | "streets" | "plain";
   /** Draw every route faintly behind the highlighted ones (default true). */
   network?: boolean;
 }
@@ -53,6 +57,8 @@ function createRouteMap(container: HTMLElement, options: RouteMapOptions): Route
   const { map: mapOptions, crowdedLabels, tiles = "osm", network = true } = options;
   const map = L.map(container, { preferCanvas: true, zoomSnap: 0.5, ...mapOptions }).setView([43.7, -79.4], 11);
   if (tiles === "osm") L.tileLayer(OSM_TILES.url, OSM_TILES.options).addTo(map);
+  // Vector maps load separately (MapLibre is large); routes draw on top as soon as they're ready.
+  else void import("./vector").then(({ addStreetMap }) => addStreetMap(map, { labels: tiles === "streets" })).catch(() => {});
 
   // Without the network, routes are only on the map while highlighted.
   const layers = new Map<string, L.Polyline>();
@@ -283,8 +289,8 @@ export interface ShapeMap {
 }
 
 /**
- * Shape quiz map: one route in red over the faint network, and no background map, since
- * street names would give away most route names. Kept for the session and reused per question.
+ * Shape quiz map: one route in red over the faint network, on a street map without names,
+ * which would give away most route names. Kept for the session and reused per question.
  */
 export function createShapeMap(): ShapeMap {
   const element = document.createElement("div");
@@ -293,7 +299,7 @@ export function createShapeMap(): ShapeMap {
   const routeMap = createRouteMap(element, {
     map: { scrollWheelZoom: false, fadeAnimation: false },
     crowdedLabels: "overlap",
-    tiles: "none",
+    tiles: "plain",
   });
   let current: string | null = null;
 
@@ -322,8 +328,8 @@ export interface DrawMap {
 }
 
 /**
- * Drawing quiz map: OpenStreetMap (you need the street names) without the route network
- * (you'd just trace it). Tap to add points to a line; Done hands the line to `onDone`.
+ * Drawing quiz map: a street map with names (you need them) but without the route network
+ * or streetcar tracks (you'd just trace them). Tap to add points to a line; Done hands the line to `onDone`.
  */
 export function createDrawMap(area: Polygon | null, onDone: (points: LatLon[]) => void): DrawMap {
   const element = document.createElement("div");
@@ -346,6 +352,7 @@ export function createDrawMap(area: Polygon | null, onDone: (points: LatLon[]) =
     map: { doubleClickZoom: false },
     crowdedLabels: "overlap",
     network: false,
+    tiles: "streets",
   });
   const { map } = routeMap;
   routeMap.show([], area);

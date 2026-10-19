@@ -6,8 +6,8 @@ Quizzes about the Toronto Transit Commission's bus and streetcar routes, in roun
 
 - **Number → name:** see a route number, pick its name from four options.
 - **Name → number:** see a route's name on its sign, type its number.
-- **Line → name:** see a route's line on a map (no street names, just the rest of the network), pick its name from four. Wrong options run nearby, and never trace the same line (e.g. 29 Dufferin and 929 Dufferin Express).
-- **Name → line:** see a route's name, draw it on the map by tapping along it. Scored 0–100 on how much of the route you covered and how much of your line was on it (full credit within 50 m, none past 200 m); 70 passes and 90+ counts towards Instant. Tunable in `src/drawScore.ts`.
+- **Line → name:** see a route's line on a street map with no names (or streetcar tracks), pick its name from four. Wrong options run nearby, and never trace the same line (e.g. 29 Dufferin and 929 Dufferin Express).
+- **Name → line:** see a route's name, draw it on a street map (without streetcar tracks to trace) by tapping along it. Scored 0–100 on how much of the route you covered and how much of your line was on it (full credit within 50 m, none past 200 m); 70 passes and 90+ counts towards Instant. Tunable in `src/drawScore.ts`.
 
 You can quiz on the whole city, or draw an area on an OpenStreetMap map to only get routes that pass through it.
 
@@ -24,3 +24,5 @@ npm run data      # regenerate src/data/ (routes, lines, lookalike routes) from 
 ```
 
 Route data comes from the [TTC Routes and Schedules](https://open.toronto.ca/dataset/ttc-routes-and-schedules/) GTFS feed, City of Toronto Open Data, under the Open Government Licence – Toronto. Only bus and streetcar routes are used (no subway/LRT lines).
+
+Maps: [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles, and for the line quizzes [OpenFreeMap](https://openfreemap.org)'s Positron style (© OpenMapTiles, data from OpenStreetMap) drawn with MapLibre, with the transit-track and (for line → name) label layers removed.
